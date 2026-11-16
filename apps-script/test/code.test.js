@@ -239,6 +239,23 @@ test('le formule con #ERROR! di una versione precedente vengono riscritte', () =
   assert.equal(vista.cella(1, 4), 'nota del rappresentante');
 });
 
+test('la colonna attivo è una casella di spunta, solo sulle righe con dati', () => {
+  const env = ambiente();
+  const inattivo = { alunno_id: 'a3', nome: 'Zoe Bianchi', attivo: false, note: '' };
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna, marco, inattivo] });
+  const alunni = env.ss.getSheetByName('Sync_Alunni');
+
+  assert.deepEqual(Object.keys(alunni.convalide).sort(), ['2,3', '3,3', '4,3']);
+  assert.equal(alunni.convalide['2,3'].tipo, 'casella di spunta');
+  // I valori restano veri booleani: le formule di Vista_Classe e l'export non cambiano.
+  assert.deepEqual(alunni.dati(3).map((riga) => riga[2]), [true, true, false]);
+  assert.deepEqual(env.get({ action: 'export_all', token: TOKEN }).alunni.map((a) => a.attivo), [true, true, false]);
+
+  // Eliminando un alunno la casella della riga rimasta vuota sparisce.
+  env.post({ token: TOKEN, action: 'sync', alunni: [{ alunno_id: 'a3', eliminato: true }] });
+  assert.deepEqual(Object.keys(alunni.convalide).sort(), ['2,3', '3,3']);
+});
+
 test('ogni sync aggiorna la data in Vista_Classe senza ricrearla', () => {
   const env = ambiente();
   env.post({ token: TOKEN, action: 'sync', alunni: [anna] });

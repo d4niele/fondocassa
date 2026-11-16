@@ -62,6 +62,24 @@ class FakeRange {
     return this;
   }
 
+  setDataValidation(regola) {
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        this.sheet.convalide[`${this.row + r},${this.col + c}`] = regola;
+      }
+    }
+    return this;
+  }
+
+  clearDataValidations() {
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        delete this.sheet.convalide[`${this.row + r},${this.col + c}`];
+      }
+    }
+    return this;
+  }
+
   setBackground(colore) {
     this.sheet.sfondi[`${this.row},${this.col}`] = colore;
     return this;
@@ -83,6 +101,7 @@ class FakeSheet {
     this.formule = {};
     this.formati = {};
     this.formatiCella = {};
+    this.convalide = {};
     this.sfondi = {};
     this.larghezze = {};
     this.righeBloccate = 0;
@@ -224,6 +243,11 @@ function carica() {
     Date,
     SpreadsheetApp: {
       flush: () => {},
+      newDataValidation: () => ({
+        requireCheckbox() {
+          return { build: () => ({ tipo: 'casella di spunta' }) };
+        },
+      }),
       getActiveSpreadsheet: () => ss,
       openById: () => ss,
     },

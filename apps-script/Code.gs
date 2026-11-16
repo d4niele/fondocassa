@@ -47,7 +47,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '3';
+var VERSIONE_FORMATO = '4';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -410,6 +410,30 @@ function scriviRighe_(ss, foglio, tabella, righe, quantePrima) {
   if (quantePrima > righe.length) {
     foglio.getRange(2 + righe.length, 1, quantePrima - righe.length, larghezza).clearContent();
   }
+  try {
+    spunte_(foglio, tabella, righe.length, quantePrima);
+  } catch (errore) {
+    // Solo estetica: i valori VERO/FALSO sono già scritti.
+  }
+}
+
+/**
+ * Mostra le colonne vero/falso come caselle di spunta, solo sulle righe con dati: su quelle
+ * vuote resterebbero caselle grigie senza significato.
+ */
+function spunte_(foglio, tabella, quante, quantePrima) {
+  tabella.colonne.forEach(function (colonna, i) {
+    if (colonna.tipo !== 'bool') {
+      return;
+    }
+    if (quante) {
+      foglio.getRange(2, i + 1, quante, 1)
+        .setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+    }
+    if (quantePrima > quante) {
+      foglio.getRange(2 + quante, i + 1, quantePrima - quante, 1).clearDataValidations();
+    }
+  });
 }
 
 /** "2026-11-16" → mezzanotte di quel giorno nel fuso del foglio; ciò che non è una data ISO resta com'è. */

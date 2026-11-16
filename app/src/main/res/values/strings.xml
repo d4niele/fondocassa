@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fondocassa</string>
+
+    <string name="tab_riepilogo">Riepilogo</string>
+    <string name="tab_alunni">Alunni</string>
+    <string name="tab_quote">Quote</string>
+    <string name="tab_entrate">Entrate</string>
+    <string name="tab_spese">Spese</string>
+
+    <string name="azione_sincronizza">Sincronizza</string>
+    <string name="azione_impostazioni">Impostazioni</string>
+    <string name="azione_salva">Salva</string>
+    <string name="azione_elimina">Elimina</string>
+    <string name="azione_annulla">Annulla</string>
+    <string name="azione_aggiungi">Aggiungi</string>
+
+    <string name="cassa_reale">In cassa adesso</string>
+    <string name="cassa_reale_nota">Versato meno spese: i soldi che ci sono davvero</string>
+    <string name="cassa_virtuale">Cassa virtuale</string>
+    <string name="cassa_virtuale_nota">Quanto avremmo se tutti avessero versato le quote</string>
+    <string name="quote_titolo">Quote della classe</string>
+    <string name="quote_previsto">Previsto</string>
+    <string name="quote_versato">Versato</string>
+    <string name="quote_da_versare">Da versare</string>
+    <string name="quote_dettaglio">%1$s a testa × %2$d alunni</string>
+    <string name="quote_nessuna">Nessuna quota definita: aggiungila nella scheda Quote</string>
+    <string name="totale_uscite">Totale spese</string>
+    <string name="alunni_in_regola_valore">%1$d alunni in regola su %2$d</string>
+    <string name="stato_sync">Da sincronizzare: %1$d record · Ultima sincronizzazione: %2$s</string>
+    <string name="mai">Mai</string>
+
+    <string name="sync_in_corso">Sincronizzazione in corso…</string>
+    <string name="sync_ok">Sincronizzazione completata: %1$d record inviati</string>
+    <string name="sync_nulla">Tutto già sincronizzato</string>
+    <string name="sync_errore">Sincronizzazione non riuscita: %1$s</string>
+    <string name="sync_non_configurata">Configura URL e token dello script nelle Impostazioni</string>
+
+    <string name="vuoto_alunni">Nessun alunno. Tocca + per aggiungere la classe.</string>
+    <string name="vuoto_entrate">Nessuna quota registrata.</string>
+    <string name="vuoto_spese">Nessuna spesa registrata.</string>
+    <string name="alunno_sconosciuto">Alunno rimosso</string>
+    <string name="non_attivo">Non attivo</string>
+    <string name="in_attesa_sync">In attesa di sincronizzazione</string>
+    <string name="con_giustificativo">Con giustificativo</string>
+
+    <string name="vuoto_quote">Nessuna quota. Tocca + per definire quanto deve versare ogni alunno (es. quota di avvio).</string>
+    <string name="quota_nuova">Nuova quota</string>
+    <string name="quota_modifica">Modifica quota</string>
+    <string name="quota_importo">Importo per alunno (€)</string>
+    <string name="quota_a_testa">a testa</string>
+    <string name="quota_descrizione_esempio">Quota di avvio</string>
+
+    <string name="alunno_nuovo">Nuovo alunno</string>
+    <string name="alunno_modifica">Modifica alunno</string>
+    <string name="alunno_nome">Nome e cognome</string>
+    <string name="alunno_attivo">Attivo (conta per le quote)</string>
+    <string name="alunno_ha_entrate">L\'alunno ha quote registrate: non può essere eliminato. Puoi segnarlo come non attivo.</string>
+
+    <string name="incasso_registra">Registra quota</string>
+    <string name="incasso_situazione">Versato %1$s su %2$s</string>
+    <string name="incasso_situazione_senza_quota">Versato finora: %1$s</string>
+    <string name="incasso_residuo">Residuo %1$s</string>
+    <string name="incasso_quota_intera">Quota intera %1$s</string>
+    <string name="incasso_fatto">%1$s registrati per %2$s</string>
+
+    <string name="entrata_nuova">Nuova entrata</string>
+    <string name="entrata_modifica">Modifica entrata</string>
+    <string name="campo_alunno">Alunno</string>
+    <string name="campo_data">Data</string>
+    <string name="campo_importo">Importo (€)</string>
+    <string name="campo_metodo">Metodo di pagamento</string>
+    <string name="campo_note">Note</string>
+    <string name="serve_alunno">Aggiungi prima almeno un alunno</string>
+
+    <string name="spesa_nuova">Nuova spesa</string>
+    <string name="spesa_modifica">Modifica spesa</string>
+    <string name="campo_descrizione">Descrizione</string>
+    <string name="campo_categoria">Categoria</string>
+    <string name="giustificativo">Giustificativo</string>
+    <string name="giustificativo_nessuno">Nessun file allegato</string>
+    <string name="giustificativo_locale">File allegato, in attesa di caricamento su Drive</string>
+    <string name="giustificativo_drive">Caricato su Google Drive</string>
+    <string name="giustificativo_foto">Scatta foto</string>
+    <string name="giustificativo_file">Scegli file</string>
+    <string name="giustificativo_apri">Apri</string>
+    <string name="giustificativo_rimuovi">Rimuovi</string>
+    <string name="giustificativo_errore">Impossibile acquisire il file</string>
+    <string name="nessuna_app">Nessuna app disponibile per questa operazione</string>
+
+    <string name="errore_campo_obbligatorio">Campo obbligatorio</string>
+    <string name="errore_importo">Importo non valido</string>
+    <string name="conferma_elimina">Eliminare definitivamente questo elemento?</string>
+
+    <string name="impostazioni_connessione">Collegamento a Google Sheets</string>
+    <string name="impostazioni_endpoint">URL della Web App (Apps Script)</string>
+    <string name="impostazioni_token">Token segreto</string>
+    <string name="impostazioni_prova">Prova connessione</string>
+    <string name="impostazioni_salvate">Impostazioni salvate</string>
+    <string name="connessione_ok">Connessione riuscita</string>
+    <string name="connessione_errore">Connessione non riuscita: %1$s</string>
+    <string name="errore_https">L\'URL deve iniziare con https://</string>
+    <string name="impostazioni_backup">Backup e ripristino</string>
+    <string name="ripristina">Ripristina dati da Google Sheets</string>
+    <string name="ripristina_conferma">Tutti i dati presenti su questo dispositivo verranno sostituiti con quelli del foglio Google.</string>
+    <string name="ripristina_conferma_pendenti">Attenzione: ci sono %1$d record non ancora sincronizzati che andranno persi. Tutti i dati presenti su questo dispositivo verranno sostituiti con quelli del foglio Google.</string>
+    <string name="ripristina_in_corso">Ripristino in corso…</string>
+    <string name="ripristina_ok">Ripristino completato: %1$d record importati</string>
+    <string name="ripristina_errore">Ripristino non riuscito: %1$s</string>
+    <string name="impostazioni_sicurezza">Sicurezza</string>
+    <string name="cambia_pin">Cambia PIN</string>
+    <string name="usa_biometria">Sblocca con impronta o volto</string>
+    <string name="biometria_non_disponibile">Biometria non disponibile su questo dispositivo</string>
+    <string name="versione">Versione %1$s</string>
+
+    <string name="pin_crea">Crea un PIN per proteggere l\'app</string>
+    <string name="pin_conferma">Ripeti il PIN</string>
+    <string name="pin_inserisci">Inserisci il PIN</string>
+    <string name="pin_attuale">Inserisci il PIN attuale</string>
+    <string name="pin_hint">PIN (almeno 4 cifre)</string>
+    <string name="pin_corto">Il PIN deve avere almeno 4 cifre</string>
+    <string name="pin_diverso">I due PIN non coincidono, riprova</string>
+    <string name="pin_errato">PIN errato</string>
+    <string name="pin_avanti">Avanti</string>
+    <string name="pin_sblocca">Sblocca</string>
+    <string name="pin_biometria">Usa biometria</string>
+    <string name="biometria_titolo">Sblocca Fondocassa</string>
+</resources>

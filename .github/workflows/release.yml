@@ -1,0 +1,96 @@
+name: Release
+
+# Pubblica una release con l'APK firmato quando viene caricato un tag di versione:
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Test, build firmata e pubblicazione
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      FONDOCASSA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      FONDOCASSA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      FONDOCASSA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versione dal tag
+        id: versione
+        run: |
+          nome="${GITHUB_REF_NAME#v}"
+          IFS=. read -r major minor patch <<< "$nome"
+          echo "nome=$nome" >> "$GITHUB_OUTPUT"
+          echo "codice=$((major * 10000 + minor * 100 + patch))" >> "$GITHUB_OUTPUT"
+
+      - name: Controllo dei secret di firma
+        run: |
+          mancanti=""
+          [ -n "$KEYSTORE_BASE64" ] || mancanti="$mancanti KEYSTORE_BASE64"
+          [ -n "$FONDOCASSA_KEYSTORE_PASSWORD" ] || mancanti="$mancanti KEYSTORE_PASSWORD"
+          [ -n "$FONDOCASSA_KEY_ALIAS" ] || mancanti="$mancanti KEY_ALIAS"
+          [ -n "$FONDOCASSA_KEY_PASSWORD" ] || mancanti="$mancanti KEY_PASSWORD"
+          if [ -n "$mancanti" ]; then
+            echo "::error::Secret mancanti:$mancanti — vedi la sezione Release del README"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test dello script Apps Script
+        run: node --test apps-script/test/*.test.js
+
+      - name: Test e lint dell'app
+        run: ./gradlew testDebugUnitTest lintDebug --stacktrace
+
+      - name: Keystore
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "FONDOCASSA_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: APK di release firmato
+        run: >
+          ./gradlew assembleRelease
+          -PappVersionName=${{ steps.versione.outputs.nome }}
+          -PappVersionCode=${{ steps.versione.outputs.codice }}
+          --stacktrace
+
+      - name: Verifica della firma
+        run: |
+          apk="app/build/outputs/apk/release/app-release.apk"
+          test -f "$apk" || { echo "::error::APK firmato non prodotto"; exit 1; }
+          apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$apksigner" verify --print-certs "$apk"
+          mv "$apk" "fondocassa-${{ steps.versione.outputs.nome }}.apk"
+          sha256sum "fondocassa-${{ steps.versione.outputs.nome }}.apk" > "fondocassa-${{ steps.versione.outputs.nome }}.apk.sha256"
+
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME"
+          "fondocassa-${{ steps.versione.outputs.nome }}.apk"
+          "fondocassa-${{ steps.versione.outputs.nome }}.apk.sha256"
+          apps-script/Code.gs
+          --title "Fondocassa ${{ steps.versione.outputs.nome }}"
+          --generate-notes
+
+      - name: Pulizia
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"

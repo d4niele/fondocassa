@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/tab_riepilogo" android:icon="@drawable/ic_riepilogo" android:title="@string/tab_riepilogo" />
+    <item android:id="@+id/tab_alunni" android:icon="@drawable/ic_alunni" android:title="@string/tab_alunni" />
+    <item android:id="@+id/tab_quote" android:icon="@drawable/ic_quote" android:title="@string/tab_quote" />
+    <item android:id="@+id/tab_entrate" android:icon="@drawable/ic_entrate" android:title="@string/tab_entrate" />
+    <item android:id="@+id/tab_spese" android:icon="@drawable/ic_spese" android:title="@string/tab_spese" />
+</menu>

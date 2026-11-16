@@ -1,0 +1,180 @@
+package it.fondocassa.ui;
+
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputLayout;
+
+import java.io.IOException;
+
+import it.fondocassa.FondocassaApp;
+import it.fondocassa.R;
+import it.fondocassa.data.Settings;
+import it.fondocassa.sync.ApiClient;
+import it.fondocassa.sync.SyncManager;
+import it.fondocassa.sync.SyncWorker;
+
+/** Collegamento allo script, ripristino da Google Sheets e sicurezza. */
+public class SettingsActivity extends BaseActivity {
+    private EditText campoEndpoint;
+    private EditText campoToken;
+    private View attesa;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_settings);
+        applicaMargini(this);
+
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle(R.string.azione_impostazioni);
+        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        Settings settings = app().settings();
+        campoEndpoint = findViewById(R.id.campo_endpoint);
+        campoToken = findViewById(R.id.campo_token);
+        attesa = findViewById(R.id.attesa);
+        if (savedInstanceState == null) {
+            campoEndpoint.setText(settings.endpoint());
+            campoToken.setText(settings.token());
+        }
+
+        findViewById(R.id.salva).setOnClickListener(v -> {
+            if (salva()) {
+                avviso(getString(R.string.impostazioni_salvate));
+            }
+        });
+        findViewById(R.id.prova).setOnClickListener(v -> provaConnessione());
+        findViewById(R.id.ripristina).setOnClickListener(v -> chiediRipristino());
+        findViewById(R.id.cambia_pin).setOnClickListener(v ->
+                startActivity(new Intent(this, LockActivity.class).putExtra(LockActivity.EXTRA_CAMBIO, true)));
+
+        MaterialSwitch biometria = findViewById(R.id.biometria);
+        biometria.setChecked(settings.biometria());
+        biometria.setOnCheckedChangeListener((bottone, attiva) -> {
+            if (attiva && !LockActivity.biometriaDisponibile(this)) {
+                bottone.setChecked(false);
+                avviso(getString(R.string.biometria_non_disponibile));
+                return;
+            }
+            settings.setBiometria(attiva);
+        });
+
+        ((TextView) findViewById(R.id.versione)).setText(getString(R.string.versione, versione()));
+    }
+
+    private String versione() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return "?";
+        }
+    }
+
+    /** Valida e salva i campi. @return false se c'è un errore di validazione */
+    private boolean salva() {
+        TextInputLayout layoutEndpoint = findViewById(R.id.layout_endpoint);
+        layoutEndpoint.setError(null);
+        String endpoint = testo(campoEndpoint);
+        if (!endpoint.isEmpty() && !endpoint.startsWith("https://")) {
+            layoutEndpoint.setError(getString(R.string.errore_https));
+            return false;
+        }
+        Settings settings = app().settings();
+        settings.setConnessione(endpoint, testo(campoToken));
+        if (settings.connessioneConfigurata()) {
+            SyncWorker.accoda(this);
+        }
+        return true;
+    }
+
+    private void provaConnessione() {
+        if (!salva()) {
+            return;
+        }
+        Settings settings = app().settings();
+        if (!settings.connessioneConfigurata()) {
+            avviso(getString(R.string.sync_non_configurata));
+            return;
+        }
+        attesa.setVisibility(View.VISIBLE);
+        app().io().execute(() -> {
+            String esito;
+            try {
+                new ApiClient(settings.endpoint(), settings.token()).ping();
+                esito = getString(R.string.connessione_ok);
+            } catch (IOException e) {
+                esito = getString(R.string.connessione_errore, e.getMessage());
+            }
+            mostraEsito(esito);
+        });
+    }
+
+    private void chiediRipristino() {
+        if (!salva()) {
+            return;
+        }
+        FondocassaApp app = app();
+        if (!app.settings().connessioneConfigurata()) {
+            avviso(getString(R.string.sync_non_configurata));
+            return;
+        }
+        app.io().execute(() -> {
+            int pendenti = app.db().alunni().pendenti().size() + app.db().quote().pendenti().size()
+                    + app.db().entrate().pendenti().size()
+                    + app.db().spese().pendenti().size();
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.ripristina)
+                        .setMessage(pendenti > 0
+                                ? getString(R.string.ripristina_conferma_pendenti, pendenti)
+                                : getString(R.string.ripristina_conferma))
+                        .setPositiveButton(R.string.ripristina, (d, w) -> ripristina())
+                        .setNegativeButton(R.string.azione_annulla, null)
+                        .show();
+            });
+        });
+    }
+
+    private void ripristina() {
+        FondocassaApp app = app();
+        attesa.setVisibility(View.VISIBLE);
+        avviso(getString(R.string.ripristina_in_corso));
+        app.io().execute(() -> {
+            String esito;
+            try {
+                int importati = SyncManager.crea(app.db(), app.settings()).ripristina();
+                esito = getString(R.string.ripristina_ok, importati);
+            } catch (IOException e) {
+                esito = getString(R.string.ripristina_errore, e.getMessage());
+            }
+            mostraEsito(esito);
+        });
+    }
+
+    private void mostraEsito(String esito) {
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            attesa.setVisibility(View.GONE);
+            avviso(esito);
+        });
+    }
+
+    private void avviso(String testo) {
+        Snackbar.make(findViewById(android.R.id.content), testo, Snackbar.LENGTH_LONG).show();
+    }
+}

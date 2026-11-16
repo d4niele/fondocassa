@@ -1,0 +1,207 @@
+package it.fondocassa.sync;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import it.fondocassa.data.Alunno;
+import it.fondocassa.data.AppDatabase;
+import it.fondocassa.data.Entrata;
+import it.fondocassa.data.Quota;
+import it.fondocassa.data.Repository;
+import it.fondocassa.data.Settings;
+import it.fondocassa.data.Spesa;
+import it.fondocassa.sync.ApiModels.AlunnoDto;
+import it.fondocassa.sync.ApiModels.EntrataDto;
+import it.fondocassa.sync.ApiModels.ExportResponse;
+import it.fondocassa.sync.ApiModels.QuotaDto;
+import it.fondocassa.sync.ApiModels.SpesaDto;
+import it.fondocassa.sync.ApiModels.SyncRequest;
+import it.fondocassa.sync.ApiModels.SyncResponse;
+
+/**
+ * Esportazione (App → Sheets) dei record con {@code is_synced = 0} e ripristino completo
+ * (Sheets → App). Le operazioni sono serializzate: sync manuale e in background non si accavallano.
+ */
+public class SyncManager {
+    private static final Object LOCK = new Object();
+
+    /** Esito di una sincronizzazione. */
+    public static class Esito {
+        public final int inviati;
+        public final int giustificativiCaricati;
+
+        Esito(int inviati, int giustificativiCaricati) {
+            this.inviati = inviati;
+            this.giustificativiCaricati = giustificativiCaricati;
+        }
+    }
+
+    private final AppDatabase db;
+    private final Settings settings;
+    private final ApiClient api;
+
+    public SyncManager(AppDatabase db, Settings settings, ApiClient api) {
+        this.db = db;
+        this.settings = settings;
+        this.api = api;
+    }
+
+    public static SyncManager crea(AppDatabase db, Settings settings) {
+        return new SyncManager(db, settings, new ApiClient(settings.endpoint(), settings.token()));
+    }
+
+    /** Invia i record non sincronizzati; in caso di errore restano in attesa per il tentativo successivo. */
+    public Esito sincronizza() throws IOException {
+        synchronized (LOCK) {
+            int caricati = caricaGiustificativi();
+
+            List<Alunno> alunni = db.alunni().pendenti();
+            List<Quota> quote = db.quote().pendenti();
+            List<Entrata> entrate = db.entrate().pendenti();
+            List<Spesa> spese = db.spese().pendenti();
+            if (alunni.isEmpty() && quote.isEmpty() && entrate.isEmpty() && spese.isEmpty()) {
+                return new Esito(0, caricati);
+            }
+
+            SyncRequest richiesta = new SyncRequest();
+            Map<String, Long> versioniAlunni = new HashMap<>();
+            Map<String, Long> versioniQuote = new HashMap<>();
+            Map<String, Long> versioniEntrate = new HashMap<>();
+            Map<String, Long> versioniSpese = new HashMap<>();
+            for (Alunno a : alunni) {
+                richiesta.alunni.add(AlunnoDto.da(a));
+                versioniAlunni.put(a.id, a.aggiornato);
+            }
+            for (Quota q : quote) {
+                richiesta.quote.add(QuotaDto.da(q));
+                versioniQuote.put(q.id, q.aggiornato);
+            }
+            for (Entrata e : entrate) {
+                richiesta.entrate.add(EntrataDto.da(e));
+                versioniEntrate.put(e.id, e.aggiornato);
+            }
+            for (Spesa s : spese) {
+                richiesta.spese.add(SpesaDto.da(s));
+                versioniSpese.put(s.id, s.aggiornato);
+            }
+
+            SyncResponse risposta = api.sync(richiesta);
+            String ts = risposta.timestampSync == null ? "" : risposta.timestampSync;
+
+            int[] confermati = {0};
+            db.runInTransaction(() -> {
+                for (String id : nonNull(risposta.alunni)) {
+                    Long versione = versioniAlunni.get(id);
+                    if (versione != null) {
+                        db.alunni().confermaSync(id, versione, ts);
+                        confermati[0]++;
+                    }
+                }
+                for (String id : nonNull(risposta.quote)) {
+                    Long versione = versioniQuote.get(id);
+                    if (versione != null) {
+                        db.quote().confermaSync(id, versione, ts);
+                        confermati[0]++;
+                    }
+                }
+                for (String id : nonNull(risposta.entrate)) {
+                    Long versione = versioniEntrate.get(id);
+                    if (versione != null) {
+                        db.entrate().confermaSync(id, versione, ts);
+                        confermati[0]++;
+                    }
+                }
+                for (String id : nonNull(risposta.spese)) {
+                    Long versione = versioniSpese.get(id);
+                    if (versione != null) {
+                        db.spese().confermaSync(id, versione, ts);
+                        confermati[0]++;
+                    }
+                }
+                db.alunni().rimuoviEliminatiSincronizzati();
+                db.quote().rimuoviEliminatiSincronizzati();
+                db.entrate().rimuoviEliminatiSincronizzati();
+                db.spese().rimuoviEliminatiSincronizzati();
+            });
+            settings.setUltimaSync(ts);
+            return new Esito(confermati[0], caricati);
+        }
+    }
+
+    /** Carica su Drive i giustificativi locali e ne salva l'URL nel record, che resta da sincronizzare. */
+    private int caricaGiustificativi() throws IOException {
+        int caricati = 0;
+        for (Spesa s : db.spese().pendenti()) {
+            if (s.eliminato || !s.uploadInAttesa()) {
+                continue;
+            }
+            File file = new File(s.giustificativoLocale);
+            if (!file.isFile()) {
+                continue; // file perso: la spesa viene comunque sincronizzata senza allegato
+            }
+            String mime = s.giustificativoMime == null ? "application/octet-stream" : s.giustificativoMime;
+            String url = api.uploadGiustificativo(s.id, file.getName(), mime, Files.readAllBytes(file.toPath()));
+            if (db.spese().impostaUrlGiustificativo(s.id, s.giustificativoLocale, url) > 0) {
+                Repository.cancellaFile(s.giustificativoLocale);
+            }
+            caricati++;
+        }
+        return caricati;
+    }
+
+    /**
+     * Ricostruisce il database locale dal foglio Google (GET ?action=export_all).
+     * I dati locali vengono sostituiti solo dopo aver ricevuto una risposta valida.
+     *
+     * @return numero di record importati
+     */
+    public int ripristina() throws IOException {
+        synchronized (LOCK) {
+            ExportResponse export = api.exportAll();
+            List<Alunno> alunni = new ArrayList<>();
+            List<Quota> quote = new ArrayList<>();
+            List<Entrata> entrate = new ArrayList<>();
+            List<Spesa> spese = new ArrayList<>();
+            for (AlunnoDto d : nonNull(export.alunni)) {
+                if (d.id != null && !d.id.isEmpty()) {
+                    alunni.add(d.inEntita());
+                }
+            }
+            for (QuotaDto d : nonNull(export.quote)) {
+                if (d.id != null && !d.id.isEmpty()) {
+                    quote.add(d.inEntita());
+                }
+            }
+            for (EntrataDto d : nonNull(export.entrate)) {
+                if (d.id != null && !d.id.isEmpty()) {
+                    entrate.add(d.inEntita());
+                }
+            }
+            for (SpesaDto d : nonNull(export.spese)) {
+                if (d.id != null && !d.id.isEmpty()) {
+                    spese.add(d.inEntita());
+                }
+            }
+            db.runInTransaction(() -> {
+                db.alunni().deleteAll();
+                db.quote().deleteAll();
+                db.entrate().deleteAll();
+                db.spese().deleteAll();
+                db.alunni().insertAll(alunni);
+                db.quote().insertAll(quote);
+                db.entrate().insertAll(entrate);
+                db.spese().insertAll(spese);
+            });
+            return alunni.size() + quote.size() + entrate.size() + spese.size();
+        }
+    }
+
+    private static <T> List<T> nonNull(List<T> lista) {
+        return lista == null ? new ArrayList<>() : lista;
+    }
+}

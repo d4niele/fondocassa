@@ -43,6 +43,10 @@ public interface EntrataDao {
             + "WHERE id_transazione = :id AND aggiornato = :aggiornato")
     void confermaSync(String id, long aggiornato, String timestamp);
 
+    /** Rimette in attesa ogni record: la prossima sincronizzazione li riscrive tutti sul foglio. */
+    @Query("UPDATE entrate SET is_synced = 0")
+    void marcaTuttiDaInviare();
+
     @Query("DELETE FROM entrate WHERE eliminato = 1 AND is_synced = 1")
     void rimuoviEliminatiSincronizzati();
 

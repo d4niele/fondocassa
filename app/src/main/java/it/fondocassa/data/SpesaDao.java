@@ -47,6 +47,10 @@ public interface SpesaDao {
             + "WHERE id_spesa = :id AND aggiornato = :aggiornato")
     void confermaSync(String id, long aggiornato, String timestamp);
 
+    /** Rimette in attesa ogni record: la prossima sincronizzazione li riscrive tutti sul foglio. */
+    @Query("UPDATE spese SET is_synced = 0")
+    void marcaTuttiDaInviare();
+
     @Query("DELETE FROM spese WHERE eliminato = 1 AND is_synced = 1")
     void rimuoviEliminatiSincronizzati();
 

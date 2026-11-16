@@ -87,6 +87,7 @@ richiesta: tratta il token come una password.
 2. Al primo avvio scegli un PIN.
 3. *Impostazioni*: incolla URL della Web App e token, poi *Prova connessione*. Per portarli sul telefono, il modo più comodo è mandarteli in un messaggio a te stesso.
 4. Su un telefono nuovo: *Impostazioni → Ripristina dati da Google Sheets*.
+5. Se hai cancellato o modificato a mano delle righe nel foglio: *Impostazioni → Reinvia tutto al foglio* le riscrive a partire dai dati dell'app.
 
 ## Il foglio Google
 

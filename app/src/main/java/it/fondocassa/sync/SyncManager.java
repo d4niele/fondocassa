@@ -187,6 +187,23 @@ public class SyncManager {
     }
 
     /**
+     * Riscrive sul foglio tutti i record dell'app, anche quelli già sincronizzati: serve a
+     * recuperare righe cancellate o modificate a mano. Le righe del foglio che l'app non conosce
+     * non vengono toccate.
+     */
+    public Esito reinviaTutto() throws IOException {
+        synchronized (LOCK) {
+            db.runInTransaction(() -> {
+                db.alunni().marcaTuttiDaInviare();
+                db.quote().marcaTuttiDaInviare();
+                db.entrate().marcaTuttiDaInviare();
+                db.spese().marcaTuttiDaInviare();
+            });
+            return sincronizza();
+        }
+    }
+
+    /**
      * Ricostruisce il database locale dal foglio Google (GET ?action=export_all).
      * I dati locali vengono sostituiti solo dopo aver ricevuto una risposta valida.
      *

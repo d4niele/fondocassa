@@ -260,6 +260,28 @@ public class SyncManagerTest {
     }
 
     @Test
+    public void reinviaTuttoRimandaAncheIRecordGiaSincronizzati() throws Exception {
+        Alunno a = alunno("Anna");
+        Entrata e = entrata(a, 500);
+        server.enqueue(new MockResponse().setBody(conferma(q(a.id), "", q(e.id), "")));
+        sync.sincronizza();
+        server.takeRequest();
+        assertTrue(db.entrate().get(e.id).synced);
+
+        server.enqueue(new MockResponse().setBody(conferma(q(a.id), "", q(e.id), "")));
+        SyncManager.Esito esito = sync.reinviaTutto();
+
+        assertEquals(2, esito.inviati);
+        JsonObject corpo = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        assertEquals(1, corpo.getAsJsonArray("alunni").size());
+        JsonObject inviata = corpo.getAsJsonArray("entrate").get(0).getAsJsonObject();
+        assertEquals(e.id, inviata.get("id_transazione").getAsString());
+        assertFalse(inviata.get("eliminato").getAsBoolean());
+        assertTrue(db.alunni().get(a.id).synced);
+        assertTrue(db.entrate().get(e.id).synced);
+    }
+
+    @Test
     public void ilRipristinoSostituisceTuttiIDatiLocali() throws Exception {
         Alunno vecchio = alunno("Dato locale da scartare");
         server.enqueue(new MockResponse().setBody("{\"ok\":true,"

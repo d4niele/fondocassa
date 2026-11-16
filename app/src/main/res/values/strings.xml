@@ -116,6 +116,12 @@
     <string name="ripristina_in_corso">Ripristino in corso…</string>
     <string name="ripristina_ok">Ripristino completato: %1$d record importati</string>
     <string name="ripristina_errore_titolo">Ripristino non riuscito</string>
+    <string name="reinvia">Reinvia tutto al foglio</string>
+    <string name="reinvia_conferma">Tutti i dati dell\'app vengono riscritti sul foglio Google: le righe cancellate a mano ricompaiono e quelle modificate a mano tornano come nell\'app. Le righe che l\'app non conosce restano dove sono.</string>
+    <string name="reinvia_azione">Reinvia</string>
+    <string name="reinvia_in_corso">Invio di tutti i dati in corso…</string>
+    <string name="reinvia_ok">Foglio aggiornato: %1$d record inviati</string>
+    <string name="reinvia_errore_titolo">Invio non riuscito</string>
     <string name="esporta_backup">Esporta backup su Google Drive</string>
     <string name="backup_in_corso">Creazione del backup in corso…</string>
     <string name="backup_ok">Backup salvato su Drive</string>

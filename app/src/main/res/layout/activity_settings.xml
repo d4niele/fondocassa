@@ -84,6 +84,13 @@
             android:layout_marginBottom="8dp"
             android:text="@string/ripristina" />
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/reinvia"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/reinvia" />
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/esporta_backup"
             style="?attr/materialButtonOutlinedStyle"
             android:layout_width="match_parent"

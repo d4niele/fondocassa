@@ -59,6 +59,7 @@ public class SettingsActivity extends BaseActivity {
         });
         findViewById(R.id.prova).setOnClickListener(v -> provaConnessione());
         findViewById(R.id.ripristina).setOnClickListener(v -> chiediRipristino());
+        findViewById(R.id.reinvia).setOnClickListener(v -> chiediReinvio());
         findViewById(R.id.esporta_backup).setOnClickListener(v -> esportaBackup());
         findViewById(R.id.cambia_pin).setOnClickListener(v ->
                 startActivity(new Intent(this, LockActivity.class).putExtra(LockActivity.EXTRA_CAMBIO, true)));
@@ -161,6 +162,45 @@ public class SettingsActivity extends BaseActivity {
                 mostraEsito(getString(R.string.ripristina_ok, importati));
             } catch (IOException e) {
                 mostraFallimento(R.string.ripristina_errore_titolo, e);
+            }
+        });
+    }
+
+    private void chiediReinvio() {
+        if (!salva()) {
+            return;
+        }
+        if (!app().settings().connessioneConfigurata()) {
+            avviso(getString(R.string.sync_non_configurata));
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.reinvia)
+                .setMessage(R.string.reinvia_conferma)
+                .setPositiveButton(R.string.reinvia_azione, (d, w) -> reinvia())
+                .setNegativeButton(R.string.azione_annulla, null)
+                .show();
+    }
+
+    private void reinvia() {
+        FondocassaApp app = app();
+        attesa.setVisibility(View.VISIBLE);
+        avviso(getString(R.string.reinvia_in_corso));
+        app.io().execute(() -> {
+            try {
+                SyncManager.Esito esito = SyncManager.crea(app.db(), app.settings()).reinviaTutto();
+                if (esito.giustificativiFalliti > 0) {
+                    runOnUiThread(() -> {
+                        attesa.setVisibility(View.GONE);
+                        mostraErrore(getString(R.string.sync_giustificativi_titolo),
+                                getString(R.string.sync_giustificativi_errore,
+                                        esito.giustificativiFalliti, esito.erroreGiustificativi));
+                    });
+                } else {
+                    mostraEsito(getString(R.string.reinvia_ok, esito.inviati));
+                }
+            } catch (IOException e) {
+                mostraFallimento(R.string.reinvia_errore_titolo, e);
             }
         });
     }

@@ -156,10 +156,18 @@ function carica() {
       nome,
       getId: () => 'cartella-' + nome,
       getUrl: () => 'https://drive.google.com/drive/folders/' + nome,
+      getFiles() {
+        const miei = drive.file.filter((f) => f.cartella === nome);
+        let i = 0;
+        return { hasNext: () => i < miei.length, next: () => miei[i++] };
+      },
       createFile(blob) {
         const file = {
           ...blob,
+          cartella: nome,
           condivisione: null,
+          getName: () => blob.nome,
+          getBlob: () => ({ ...blob, setName: (n) => ({ ...blob, nome: n }) }),
           setSharing(accesso, permesso) {
             this.condivisione = [accesso, permesso];
             return this;
@@ -210,9 +218,13 @@ function carica() {
     Utilities: {
       base64Decode: (s) => Array.from(Buffer.from(s, 'base64')),
       newBlob: (byte, mime, nome) => ({ byte, mime, nome }),
-      formatDate: (data) => {
-        // Sufficiente per i test: data locale a Roma in formato ISO.
-        return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(data);
+      zip: (voci, nome) => ({ nome, mime: 'application/zip', voci }),
+      formatDate: (data, fuso, formato) => {
+        // Sufficiente per i test: data (e ora) locale a Roma.
+        const giorno = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(data);
+        if (formato === 'yyyy-MM-dd') return giorno;
+        const ora = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', timeStyle: 'medium' }).format(data);
+        return giorno.replace(/-/g, '') + '-' + ora.replace(/:/g, '');
       },
       getUuid: () => `00000000-0000-4000-8000-${String(++uuid).padStart(12, '0')}`,
     },

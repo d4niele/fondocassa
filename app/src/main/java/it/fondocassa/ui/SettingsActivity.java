@@ -1,6 +1,8 @@
 package it.fondocassa.ui;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
@@ -17,8 +19,10 @@ import java.io.IOException;
 
 import it.fondocassa.FondocassaApp;
 import it.fondocassa.R;
+import it.fondocassa.data.AppDatabase;
 import it.fondocassa.data.Settings;
 import it.fondocassa.sync.ApiClient;
+import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.SyncManager;
 import it.fondocassa.sync.SyncWorker;
 
@@ -55,6 +59,7 @@ public class SettingsActivity extends BaseActivity {
         });
         findViewById(R.id.prova).setOnClickListener(v -> provaConnessione());
         findViewById(R.id.ripristina).setOnClickListener(v -> chiediRipristino());
+        findViewById(R.id.esporta_backup).setOnClickListener(v -> esportaBackup());
         findViewById(R.id.cambia_pin).setOnClickListener(v ->
                 startActivity(new Intent(this, LockActivity.class).putExtra(LockActivity.EXTRA_CAMBIO, true)));
 
@@ -162,6 +167,48 @@ public class SettingsActivity extends BaseActivity {
             }
             mostraEsito(esito);
         });
+    }
+
+    /** Crea su Drive lo ZIP con database e giustificativi. */
+    private void esportaBackup() {
+        if (!salva()) {
+            return;
+        }
+        FondocassaApp app = app();
+        if (!app.settings().connessioneConfigurata()) {
+            avviso(getString(R.string.sync_non_configurata));
+            return;
+        }
+        attesa.setVisibility(View.VISIBLE);
+        avviso(getString(R.string.backup_in_corso));
+        app.io().execute(() -> {
+            try {
+                BackupResponse backup = SyncManager.crea(app.db(), app.settings())
+                        .esportaBackup(getDatabasePath(AppDatabase.NOME_FILE));
+                runOnUiThread(() -> mostraBackup(backup));
+            } catch (IOException e) {
+                mostraEsito(getString(R.string.backup_errore, e.getMessage()));
+            }
+        });
+    }
+
+    private void mostraBackup(BackupResponse backup) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        attesa.setVisibility(View.GONE);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.backup_ok)
+                .setMessage(getString(R.string.backup_dettaglio, backup.nome, backup.giustificativi))
+                .setPositiveButton(R.string.giustificativo_apri, (d, w) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(backup.url)));
+                    } catch (ActivityNotFoundException e) {
+                        avviso(getString(R.string.nessuna_app));
+                    }
+                })
+                .setNegativeButton(android.R.string.ok, null)
+                .show();
     }
 
     private void mostraEsito(String esito) {

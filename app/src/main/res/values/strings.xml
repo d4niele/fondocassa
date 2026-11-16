@@ -54,6 +54,12 @@
     <string name="alunno_nuovo">Nuovo alunno</string>
     <string name="alunno_modifica">Modifica alunno</string>
     <string name="alunno_nome">Nome e cognome</string>
+    <string name="alunno_note">Note (es. nomi dei genitori)</string>
+    <string name="importa_alunni">Importa elenco da CSV o JSON</string>
+    <string name="importa_istruzioni">Incolla l\'elenco oppure scegli un file. Colonne: nome, cognome, note (es. i nomi dei genitori).</string>
+    <string name="importa_esempio">nome;cognome;note\nAnna;Rossi;Genitori: Paola e Luca</string>
+    <string name="importa_conferma">Importa</string>
+    <string name="importa_fatto">%1$d alunni importati</string>
     <string name="alunno_attivo">Attivo (conta per le quote)</string>
     <string name="alunno_ha_entrate">L\'alunno ha quote registrate: non può essere eliminato. Puoi segnarlo come non attivo.</string>
 
@@ -107,6 +113,11 @@
     <string name="ripristina_in_corso">Ripristino in corso…</string>
     <string name="ripristina_ok">Ripristino completato: %1$d record importati</string>
     <string name="ripristina_errore">Ripristino non riuscito: %1$s</string>
+    <string name="esporta_backup">Esporta backup su Google Drive</string>
+    <string name="backup_in_corso">Creazione del backup in corso…</string>
+    <string name="backup_ok">Backup salvato su Drive</string>
+    <string name="backup_dettaglio">%1$s\n\nContiene il database e %2$d giustificativi. Lo trovi nella cartella Fondocassa_Backup.</string>
+    <string name="backup_errore">Backup non riuscito: %1$s</string>
     <string name="impostazioni_sicurezza">Sicurezza</string>
     <string name="cambia_pin">Cambia PIN</string>
     <string name="usa_biometria">Sblocca con impronta o volto</string>

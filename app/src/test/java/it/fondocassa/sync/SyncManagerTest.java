@@ -237,6 +237,48 @@ public class SyncManagerTest {
     }
 
     @Test
+    public void ilBackupSincronizzaEPoiInviaIlFileDelDatabase() throws Exception {
+        Context context = ApplicationProvider.getApplicationContext();
+        AppDatabase suFile = androidx.room.Room.databaseBuilder(context, AppDatabase.class, "backup-test.db")
+                .allowMainThreadQueries().build();
+        try {
+            Repository repoSuFile = new Repository(suFile, () -> { });
+            Alunno a = new Alunno();
+            a.nome = "Anna Rossi";
+            repoSuFile.salvaAlunno(a);
+            server.enqueue(new MockResponse().setBody(conferma(q(a.id), "", "", "")));
+            server.enqueue(new MockResponse().setBody("{\"ok\":true,\"url\":\"https://drive.google.com/file/d/Z/view\","
+                    + "\"nome\":\"fondocassa-backup-20261116-100000.zip\",\"giustificativi\":3}"));
+
+            ApiModels.BackupResponse backup = SyncManager.crea(suFile, settings)
+                    .esportaBackup(context.getDatabasePath("backup-test.db"));
+
+            assertEquals("https://drive.google.com/file/d/Z/view", backup.url);
+            assertEquals(3, backup.giustificativi);
+            assertEquals("sync", JsonParser.parseString(server.takeRequest().getBody().readUtf8())
+                    .getAsJsonObject().get("action").getAsString());
+            JsonObject corpo = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+            assertEquals("backup", corpo.get("action").getAsString());
+            byte[] db = java.util.Base64.getDecoder().decode(corpo.get("db_base64").getAsString());
+            assertEquals("SQLite format 3", new String(db, 0, 15, java.nio.charset.StandardCharsets.US_ASCII));
+            // Il file inviato contiene davvero i dati (nessuna scrittura rimasta nel journal).
+            assertTrue(new String(db, java.nio.charset.StandardCharsets.ISO_8859_1).contains("Anna Rossi"));
+        } finally {
+            suFile.close();
+        }
+    }
+
+    @Test
+    public void seLaSincronizzazioneFallisceIlBackupNonParte() {
+        alunno("Anna");
+        server.enqueue(new MockResponse().setBody("{\"ok\":false,\"error\":\"Token non valido\"}"));
+
+        assertThrows(ApiException.class, () -> sync.esportaBackup(new File("inesistente.db")));
+
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
     public void seIlRipristinoFallisceIDatiLocaliRestanoIntatti() {
         Alunno a = alunno("Anna");
         server.enqueue(new MockResponse().setBody("{\"ok\":false,\"error\":\"Token non valido\"}"));

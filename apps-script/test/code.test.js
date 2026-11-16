@@ -12,8 +12,8 @@ function ambiente() {
   return env;
 }
 
-const anna = { alunno_id: 'a1', nome: 'Anna Rossi', attivo: true };
-const marco = { alunno_id: 'a2', nome: 'Marco Verdi', attivo: true };
+const anna = { alunno_id: 'a1', nome: 'Anna Rossi', attivo: true, note: 'Genitori: Paola e Luca' };
+const marco = { alunno_id: 'a2', nome: 'Marco Verdi', attivo: true, note: '' };
 const quotaAvvio = { id_quota: 'q1', descrizione: 'Quota di avvio', importo_cent: 500, data: '2026-09-15' };
 const entrata = {
   id_transazione: 'e1', alunno_id: 'a1', data: '2026-09-20', importo_cent: 500, metodo: 'Contante', note: '',
@@ -68,9 +68,9 @@ test('sync inserisce i record nei fogli di servizio e conferma gli id', () => {
   assert.match(r.timestamp_sync, /^\d{4}-\d{2}-\d{2}T/);
 
   // L'anagrafica è tenuta in ordine alfabetico.
-  assert.deepEqual(env.ss.getSheetByName('Sync_Alunni').dati(4), [
-    ['a1', 'Anna Rossi', true, r.timestamp_sync],
-    ['a2', 'Marco Verdi', true, r.timestamp_sync],
+  assert.deepEqual(env.ss.getSheetByName('Sync_Alunni').dati(5), [
+    ['a1', 'Anna Rossi', true, 'Genitori: Paola e Luca', r.timestamp_sync],
+    ['a2', 'Marco Verdi', true, '', r.timestamp_sync],
   ]);
   // Nel foglio gli importi sono in euro.
   assert.deepEqual(env.ss.getSheetByName('Sync_Quote').dati(5), [
@@ -97,7 +97,7 @@ test('le intestazioni dei fogli rispettano la specifica', () => {
     ['id_spesa', 'descrizione', 'categoria', 'data', 'importo', 'url_giustificativo', 'timestamp_sync']);
   assert.deepEqual(intestazione('Sync_Quote', 5),
     ['id_quota', 'descrizione', 'importo', 'data', 'timestamp_sync']);
-  assert.deepEqual(intestazione('Sync_Alunni', 4), ['alunno_id', 'nome', 'attivo', 'timestamp_sync']);
+  assert.deepEqual(intestazione('Sync_Alunni', 5), ['alunno_id', 'nome', 'attivo', 'note', 'timestamp_sync']);
 });
 
 test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta di formule', () => {
@@ -175,12 +175,12 @@ test('i record senza chiave non vengono confermati', () => {
   const env = ambiente();
   const r = env.post({ token: TOKEN, action: 'sync', alunni: [{ nome: 'Senza id' }, anna] });
   assert.deepEqual(r.alunni, ['a1']);
-  assert.equal(env.ss.getSheetByName('Sync_Alunni').dati(4).length, 1);
+  assert.equal(env.ss.getSheetByName('Sync_Alunni').dati(5).length, 1);
 });
 
 test('export_all restituisce esattamente ciò che è stato sincronizzato', () => {
   const env = ambiente();
-  const inattivo = { alunno_id: 'a3', nome: 'Zoe Bianchi', attivo: false };
+  const inattivo = { alunno_id: 'a3', nome: 'Zoe Bianchi', attivo: false, note: '' };
   const s = env.post({
     token: TOKEN, action: 'sync', alunni: [anna, inattivo], quote: [quotaAvvio], entrate: [entrata], spese: [spesa],
   });
@@ -268,4 +268,43 @@ test('setup crea fogli, cartella e un token che resta stabile', () => {
   assert.notEqual(nuovo, token);
   assert.equal(env.get({ action: 'ping', token }).ok, false);
   assert.equal(env.get({ action: 'ping', token: nuovo }).ok, true);
+});
+
+test('backup crea uno ZIP privato con il database e tutti i giustificativi', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
+  const carica = (id, nome, byte) => env.post({
+    token: TOKEN, action: 'upload_giustificativo', id_spesa: id, filename: nome, mime_type: 'image/jpeg',
+    data_base64: Buffer.from(byte).toString('base64'),
+  });
+  carica('s1', 'scontrino.jpg', [1, 2]);
+  carica('s2', 'ricevuta.pdf', [3]);
+  const db = Buffer.from('SQLite format 3\0dati');
+
+  const r = env.post({ token: TOKEN, action: 'backup', db_base64: db.toString('base64') });
+
+  assert.equal(r.ok, true);
+  assert.equal(r.giustificativi, 2);
+  assert.match(r.nome, /^fondocassa-backup-\d{8}-\d{6}\.zip$/);
+  assert.match(r.url, /^https:\/\/drive\.google\.com\/file\/d\//);
+  assert.deepEqual(env.drive.cartelle.map((c) => c.nome), ['Fondocassa_Giustificativi', 'Fondocassa_Backup']);
+  const zip = env.drive.file[2];
+  assert.equal(zip.cartella, 'Fondocassa_Backup');
+  assert.equal(zip.nome, r.nome);
+  assert.equal(zip.condivisione, null, 'il backup contiene dati personali: non va condiviso');
+  assert.deepEqual(Array.from(zip.voci, (v) => v.nome),
+    ['fondocassa.db', 'giustificativi/s1_scontrino.jpg', 'giustificativi/s2_ricevuta.pdf']);
+  assert.deepEqual(zip.voci[0].byte, Array.from(db));
+  assert.deepEqual(zip.voci[1].byte, [1, 2]);
+
+  // Un secondo backup non include gli ZIP precedenti.
+  const secondo = env.post({ token: TOKEN, action: 'backup', db_base64: db.toString('base64') });
+  assert.equal(secondo.giustificativi, 2);
+});
+
+test('backup senza database o senza token viene rifiutato', () => {
+  const env = ambiente();
+  assert.match(env.post({ token: TOKEN, action: 'backup' }).error, /manca il database/);
+  assert.equal(env.post({ token: 'sbagliato', action: 'backup', db_base64: 'AA==' }).ok, false);
+  assert.equal(env.drive.file.length, 0);
 });

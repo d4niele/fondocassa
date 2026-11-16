@@ -18,6 +18,7 @@ public final class ApiModels {
     public static class AlunnoDto {
         @SerializedName("alunno_id") public String id;
         public String nome;
+        public String note;
         public boolean attivo = true;
         public boolean eliminato;
         @SerializedName("timestamp_sync") public String timestampSync;
@@ -26,6 +27,7 @@ public final class ApiModels {
             AlunnoDto d = new AlunnoDto();
             d.id = a.id;
             d.nome = a.nome;
+            d.note = a.note == null ? "" : a.note;
             d.attivo = a.attivo;
             d.eliminato = a.eliminato;
             return d;
@@ -35,6 +37,7 @@ public final class ApiModels {
             Alunno a = new Alunno();
             a.id = id;
             a.nome = nome == null ? "" : nome;
+            a.note = note == null ? "" : note;
             a.attivo = attivo;
             a.synced = true;
             a.timestampSync = timestampSync;
@@ -151,6 +154,19 @@ public final class ApiModels {
         public List<QuotaDto> quote = new ArrayList<>();
         public List<EntrataDto> entrate = new ArrayList<>();
         public List<SpesaDto> spese = new ArrayList<>();
+    }
+
+    public static class BackupRequest {
+        public String token;
+        public final String action = "backup";
+        @SerializedName("db_base64") public String dbBase64;
+    }
+
+    /** ZIP creato su Drive con il database e i giustificativi. */
+    public static class BackupResponse {
+        public String url;
+        public String nome;
+        public int giustificativi;
     }
 
     /** Lo script conferma gli id effettivamente scritti sul foglio. */

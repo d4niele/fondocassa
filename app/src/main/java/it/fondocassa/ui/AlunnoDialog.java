@@ -44,7 +44,9 @@ public final class AlunnoDialog {
         View vista = fragment.getLayoutInflater().inflate(R.layout.dialog_alunno, null);
         EditText nome = vista.findViewById(R.id.campo_nome);
         MaterialSwitch attivo = vista.findViewById(R.id.attivo);
+        EditText note = vista.findViewById(R.id.campo_note);
         nome.setText(alunno.nome);
+        note.setText(alunno.note);
         attivo.setChecked(alunno.attivo);
         attivo.setVisibility(nuovo ? View.GONE : View.VISIBLE);
         View ancora = fragment.requireView();
@@ -75,6 +77,7 @@ public final class AlunnoDialog {
                 return;
             }
             alunno.nome = valore;
+            alunno.note = BaseActivity.testo(note);
             alunno.attivo = attivo.isChecked();
             app.io().execute(() -> app.repository().salvaAlunno(alunno));
             dialog.dismiss();

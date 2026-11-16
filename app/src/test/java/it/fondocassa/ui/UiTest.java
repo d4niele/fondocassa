@@ -165,6 +165,35 @@ public class UiTest {
         assertEquals(500, app.db().alunni().listConSaldo().get(0).totaleVersato);
     }
 
+    @Test
+    public void conLaListaVuotaSiPuoImportareLElenco() throws Exception {
+        app.sblocca();
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a ->
+                    ((BottomNavigationView) a.findViewById(R.id.navigazione)).setSelectedItemId(R.id.tab_alunni));
+            attendi();
+            scenario.onActivity(a -> {
+                assertEquals(android.view.View.VISIBLE, a.findViewById(R.id.vuoto_box).getVisibility());
+                assertEquals(a.getString(R.string.importa_alunni), testo(a, R.id.azione_vuoto));
+                AlunniFragment alunni =
+                        (AlunniFragment) a.getSupportFragmentManager().findFragmentById(R.id.contenuto);
+                assertNotNull("un elenco non valido viene segnalato", alunni.importa("{\"classe\":1}"));
+                assertEquals(null, alunni.importa(
+                        "nome;cognome;note\nMarco;Verdi;\nAnna;Rossi;Genitori: Paola e Luca\n"));
+            });
+            attendi();
+            scenario.onActivity(a ->
+                    assertEquals(android.view.View.GONE, a.findViewById(R.id.vuoto_box).getVisibility()));
+        }
+
+        List<it.fondocassa.data.AlunnoConSaldo> classe = app.db().alunni().listConSaldo();
+        assertEquals(2, classe.size());
+        assertEquals("Rossi Anna", classe.get(0).alunno.nome);
+        assertEquals("Genitori: Paola e Luca", classe.get(0).alunno.note);
+        assertEquals("Verdi Marco", classe.get(1).alunno.nome);
+        assertFalse(classe.get(0).alunno.synced);
+    }
+
     private String nuovoAlunno(String nome) {
         Alunno a = new Alunno();
         a.nome = nome;

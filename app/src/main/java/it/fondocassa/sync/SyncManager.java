@@ -16,6 +16,7 @@ import it.fondocassa.data.Repository;
 import it.fondocassa.data.Settings;
 import it.fondocassa.data.Spesa;
 import it.fondocassa.sync.ApiModels.AlunnoDto;
+import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.ApiModels.EntrataDto;
 import it.fondocassa.sync.ApiModels.ExportResponse;
 import it.fondocassa.sync.ApiModels.QuotaDto;
@@ -198,6 +199,27 @@ public class SyncManager {
                 db.spese().insertAll(spese);
             });
             return alunni.size() + quote.size() + entrate.size() + spese.size();
+        }
+    }
+
+    /**
+     * Esporta su Google Drive uno ZIP con il database SQLite e tutti i giustificativi.
+     * Prima sincronizza, così anche gli allegati ancora sul telefono finiscono su Drive e nello ZIP.
+     *
+     * @param fileDatabase il file SQLite dell'app
+     */
+    public BackupResponse esportaBackup(File fileDatabase) throws IOException {
+        synchronized (LOCK) {
+            sincronizza();
+            // Riversa nel file principale le scritture ancora nel journal (WAL) prima di leggerlo.
+            try (android.database.Cursor c = db.getOpenHelper().getWritableDatabase()
+                    .query("PRAGMA wal_checkpoint(TRUNCATE)")) {
+                c.moveToFirst();
+            }
+            if (!fileDatabase.isFile()) {
+                throw new IOException("Database non trovato");
+            }
+            return api.backup(Files.readAllBytes(fileDatabase.toPath()));
         }
     }
 

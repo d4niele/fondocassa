@@ -16,6 +16,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import it.fondocassa.sync.ApiModels.BackupRequest;
+import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.ApiModels.ExportResponse;
 import it.fondocassa.sync.ApiModels.SyncRequest;
 import it.fondocassa.sync.ApiModels.SyncResponse;
@@ -67,6 +69,18 @@ public class ApiClient {
             throw new ApiException("Lo script non ha restituito l'URL del giustificativo");
         }
         return url.getAsString();
+    }
+
+    /** Invia il file del database: lo script lo impacchetta su Drive in uno ZIP con i giustificativi. */
+    public BackupResponse backup(byte[] database) throws IOException {
+        BackupRequest richiesta = new BackupRequest();
+        richiesta.token = token;
+        richiesta.dbBase64 = Base64.getEncoder().encodeToString(database);
+        BackupResponse risposta = gson.fromJson(post(gson.toJson(richiesta)), BackupResponse.class);
+        if (risposta.url == null || risposta.url.isEmpty()) {
+            throw new ApiException("Lo script non ha restituito il link del backup");
+        }
+        return risposta;
     }
 
     public ExportResponse exportAll() throws IOException {

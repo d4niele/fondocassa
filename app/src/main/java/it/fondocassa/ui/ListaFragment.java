@@ -21,7 +21,7 @@ import it.fondocassa.R;
 /** Base delle schede a lista: RecyclerView, messaggio "vuoto" e pulsante +. */
 public abstract class ListaFragment extends Fragment {
     private RigaAdapter adapter;
-    private TextView vuoto;
+    private View vuotoBox;
 
     protected abstract int messaggioVuoto();
 
@@ -30,6 +30,14 @@ public abstract class ListaFragment extends Fragment {
     protected abstract void alAggiungi();
 
     protected abstract void osserva();
+
+    /** Testo del pulsante mostrato quando la lista è vuota (0 = nessun pulsante). */
+    protected int azioneVuoto() {
+        return 0;
+    }
+
+    protected void alAzioneVuoto() {
+    }
 
     protected FondocassaApp app() {
         return (FondocassaApp) requireActivity().getApplication();
@@ -49,14 +57,20 @@ public abstract class ListaFragment extends Fragment {
         lista.setLayoutManager(new LinearLayoutManager(requireContext()));
         lista.addItemDecoration(new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL));
         lista.setAdapter(adapter);
-        vuoto = view.findViewById(R.id.vuoto);
-        vuoto.setText(messaggioVuoto());
+        vuotoBox = view.findViewById(R.id.vuoto_box);
+        ((TextView) view.findViewById(R.id.vuoto)).setText(messaggioVuoto());
+        if (azioneVuoto() != 0) {
+            TextView azione = view.findViewById(R.id.azione_vuoto);
+            azione.setText(azioneVuoto());
+            azione.setVisibility(View.VISIBLE);
+            azione.setOnClickListener(v -> alAzioneVuoto());
+        }
         view.findViewById(R.id.aggiungi).setOnClickListener(v -> alAggiungi());
         osserva();
     }
 
     protected void mostra(List<RigaAdapter.Riga> righe) {
         adapter.imposta(righe);
-        vuoto.setVisibility(righe.isEmpty() ? View.VISIBLE : View.GONE);
+        vuotoBox.setVisibility(righe.isEmpty() ? View.VISIBLE : View.GONE);
     }
 }

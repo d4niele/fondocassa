@@ -6,7 +6,7 @@
  *
  * Fogli (correlati tra loro tramite le chiavi):
  *
- *   Sync_Alunni   alunno_id ◄──────────┐ anagrafica
+ *   Sync_Alunni   alunno_id ◄──────────┐ anagrafica (nome, attivo, note)
  *   Sync_Quote    id_quota             │ quote uguali per tutti (dovuto = somma degli importi)
  *   Sync_Entrate  id_transazione, alunno_id ─┘ + colonna "alunno" ricavata con CERCA.VERT
  *   Sync_Spese    id_spesa, url_giustificativo ──► file su Google Drive
@@ -17,6 +17,7 @@
  *   GET  ?action=export_all&token=…
  *   POST {token, action: "sync", alunni: [], quote: [], entrate: [], spese: []}
  *   POST {token, action: "upload_giustificativo", id_spesa, filename, mime_type, data_base64}
+ *   POST {token, action: "backup", db_base64}  → ZIP su Drive con database e giustificativi
  *
  * Le risposte sono sempre JSON: {ok: true, …} oppure {ok: false, error: "…"}.
  */
@@ -25,6 +26,8 @@ var PROP_TOKEN = 'API_TOKEN';
 var PROP_SPREADSHEET = 'SPREADSHEET_ID';
 var PROP_CARTELLA = 'GIUSTIFICATIVI_FOLDER_ID';
 var NOME_CARTELLA = 'Fondocassa_Giustificativi';
+var PROP_CARTELLA_BACKUP = 'BACKUP_FOLDER_ID';
+var NOME_CARTELLA_BACKUP = 'Fondocassa_Backup';
 var FOGLIO_VISTA = 'Vista_Classe';
 var MAX_BYTE_ALLEGATO = 20 * 1024 * 1024;
 
@@ -39,6 +42,7 @@ var TABELLE = {
       { nome: 'alunno_id', tipo: 'testo' },
       { nome: 'nome', tipo: 'testo' },
       { nome: 'attivo', tipo: 'bool' },
+      { nome: 'note', tipo: 'testo' },
       { nome: 'timestamp_sync', tipo: 'testo' }
     ],
     ordinaPer: 'nome'
@@ -112,14 +116,15 @@ function doPost(e) {
       throw new Error('Richiesta non valida: JSON atteso');
     }
     verificaToken_(corpo.token);
-    if (corpo.action !== 'sync' && corpo.action !== 'upload_giustificativo') {
+    var azioni = { sync: sync_, upload_giustificativo: uploadGiustificativo_, backup: backup_ };
+    if (!Object.prototype.hasOwnProperty.call(azioni, corpo.action)) {
       throw new Error('Azione non riconosciuta: ' + corpo.action);
     }
     // Una scrittura alla volta: due sincronizzazioni contemporanee non si sovrascrivono.
     var lock = LockService.getScriptLock();
     lock.waitLock(30000);
     try {
-      return corpo.action === 'sync' ? sync_(corpo) : uploadGiustificativo_(corpo);
+      return azioni[corpo.action](corpo);
     } finally {
       lock.releaseLock();
     }
@@ -194,6 +199,26 @@ function uploadGiustificativo_(corpo) {
   var file = cartellaGiustificativi_().createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { url: file.getUrl() };
+}
+
+/**
+ * Backup completo: crea su Drive (cartella privata Fondocassa_Backup) uno ZIP con il database
+ * SQLite inviato dall'app e tutti i giustificativi già presenti nella cartella dedicata.
+ */
+function backup_(corpo) {
+  if (!corpo.db_base64) {
+    throw new Error('Backup non valido: manca il database');
+  }
+  var blob = [Utilities.newBlob(Utilities.base64Decode(corpo.db_base64), 'application/x-sqlite3', 'fondocassa.db')];
+  var file = cartellaGiustificativi_().getFiles();
+  while (file.hasNext()) {
+    var giustificativo = file.next();
+    blob.push(giustificativo.getBlob().setName('giustificativi/' + giustificativo.getName()));
+  }
+  var nome = 'fondocassa-backup-'
+    + Utilities.formatDate(new Date(), cartellaDiLavoro_().getSpreadsheetTimeZone(), 'yyyyMMdd-HHmmss') + '.zip';
+  var zip = cartella_(PROP_CARTELLA_BACKUP, NOME_CARTELLA_BACKUP).createFile(Utilities.zip(blob, nome));
+  return { url: zip.getUrl(), nome: nome, giustificativi: blob.length - 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -445,13 +470,18 @@ function cartellaDiLavoro_() {
 }
 
 function cartellaGiustificativi_() {
+  return cartella_(PROP_CARTELLA, NOME_CARTELLA);
+}
+
+/** Cartella di Drive ricordata nelle proprietà dello script; viene creata al primo uso. */
+function cartella_(proprietaId, nome) {
   var proprieta = PropertiesService.getScriptProperties();
-  var id = proprieta.getProperty(PROP_CARTELLA);
+  var id = proprieta.getProperty(proprietaId);
   if (id) {
     return DriveApp.getFolderById(id);
   }
-  var cartella = DriveApp.createFolder(NOME_CARTELLA);
-  proprieta.setProperty(PROP_CARTELLA, cartella.getId());
+  var cartella = DriveApp.createFolder(nome);
+  proprieta.setProperty(proprietaId, cartella.getId());
   return cartella;
 }
 

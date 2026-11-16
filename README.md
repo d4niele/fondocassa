@@ -8,6 +8,7 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 - **Offline-first**: tutto viene salvato subito in SQLite sul telefono; la sincronizzazione parte da sola quando c'è rete o con il pulsante *Sincronizza*.
 - **Google Sheets come specchio e backup**: un Google Apps Script fa da ponte, senza OAuth né chiavi nell'APK. Da un telefono nuovo si ricostruisce tutto con *Ripristina dati da Google Sheets*.
 - **Giustificativi su Drive**: foto dello scontrino (compressa) o PDF, caricati in una cartella dedicata e collegati alla spesa.
+- **Backup completo su Drive**: uno ZIP con il database SQLite e tutti i giustificativi, con un tocco.
 - **Protetta da PIN** (e biometria, se attivata).
 
 ```
@@ -24,6 +25,26 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 | **Quote** | Le quote uguali per tutti, ad esempio «Quota di avvio — 5 €». Il dovuto di ogni alunno è la somma delle quote. |
 | **Entrate** | Registro di tutti i versamenti, per correggerli o eliminarli. |
 | **Spese** | Uscite con categoria e giustificativo (foto o PDF). |
+
+### Importare l'elenco della classe
+
+Quando la scheda *Alunni* è vuota compare il pulsante **Importa elenco da CSV o JSON**: si incolla
+il testo oppure si sceglie un file. Le colonne sono `nome`, `cognome` e `note` (ad esempio i nomi
+dei genitori); il separatore può essere `;`, `,` o tabulazione, e l'intestazione è facoltativa.
+
+```csv
+nome;cognome;note
+Anna;Rossi;Genitori: Paola e Luca
+Marco;Verdi;
+```
+
+```json
+[{"nome": "Anna", "cognome": "Rossi", "note": "Genitori: Paola e Luca"},
+ {"nome": "Marco", "cognome": "Verdi"}]
+```
+
+Gli alunni vengono salvati come «Cognome Nome», in ordine alfabetico come nel registro. Le note
+restano nell'app e nel foglio privato: non compaiono in `Vista_Classe`.
 
 Esempio: 20 alunni e una quota di avvio di 5 € → *Previsto* 100 €. Se hanno versato in 12 e sono
 stati spesi 8 €: *Versato* 60 €, *Da versare* 40 €, *In cassa adesso* 52 €, *Cassa virtuale* 92 €.
@@ -55,7 +76,7 @@ Quando aggiorni `Code.gs`, pubblica una *nuova versione* dello stesso deployment
 I fogli sono correlati tra loro tramite le chiavi, come le tabelle del database dell'app:
 
 ```
-Sync_Alunni   alunno_id ◄───────────┐   nome, attivo
+Sync_Alunni   alunno_id ◄───────────┐   nome, attivo, note
 Sync_Quote    id_quota              │   descrizione, importo (per alunno), data
 Sync_Entrate  id_transazione, alunno_id ─┘  data, importo, metodo, note  (+ colonna «alunno» via CERCA.VERT)
 Sync_Spese    id_spesa                  descrizione, categoria, data, importo, url_giustificativo ──► Drive
@@ -64,6 +85,19 @@ Vista_Classe  solo formule sui fogli sopra
 
 - I fogli `Sync_*` sono le tabelle grezze, 1:1 con SQLite: **non vanno modificati a mano** (ogni riga ha anche `timestamp_sync`).
 - `Vista_Classe` contiene solo formule: bilancio (quota per alunno, previsto, versato, da versare, spese, cassa reale e virtuale), stato di ogni alunno e registro delle uscite con il link al giustificativo. Si aggiorna da sola a ogni sincronizzazione.
+
+### Backup completo
+
+*Impostazioni → Esporta backup su Google Drive* sincronizza i dati e crea, nella cartella privata
+`Fondocassa_Backup`, un file `fondocassa-backup-AAAAMMGG-HHMMSS.zip` che contiene:
+
+```
+fondocassa.db            il database SQLite dell'app
+giustificativi/…         tutti gli scontrini e le ricevute (jpg, png, pdf)
+```
+
+È un archivio da conservare (ad esempio a fine anno o al passaggio di consegne); il ripristino
+dell'app avviene invece dai fogli `Sync_*` con *Ripristina dati da Google Sheets*.
 
 ### Condivisione con i genitori
 
@@ -113,6 +147,7 @@ usano finti servizi Google: verificano la logica e le formule scritte, non il lo
 | `GET ?action=export_all&token=…` | `{ok, alunni[], quote[], entrate[], spese[]}` |
 | `POST {token, action:"sync", alunni[], quote[], entrate[], spese[]}` | `{ok, timestamp_sync, alunni[id], quote[id], entrate[id], spese[id]}` |
 | `POST {token, action:"upload_giustificativo", id_spesa, filename, mime_type, data_base64}` | `{ok, url}` |
+| `POST {token, action:"backup", db_base64}` | `{ok, url, nome, giustificativi}` |
 
 Gli importi viaggiano in centesimi (`importo_cent`) e sono scritti in euro nel foglio. Un record con
 `eliminato: true` viene rimosso dal foglio. In caso di errore: `{ok:false, error}`.

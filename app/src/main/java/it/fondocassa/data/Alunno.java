@@ -15,6 +15,9 @@ public class Alunno {
 
     public String nome = "";
 
+    /** Appunti liberi, ad esempio i nomi dei genitori. Restano nel foglio privato. */
+    public String note = "";
+
     /** Un alunno non attivo (es. trasferito) resta nello storico ma non conta come "in sospeso". */
     public boolean attivo = true;
 

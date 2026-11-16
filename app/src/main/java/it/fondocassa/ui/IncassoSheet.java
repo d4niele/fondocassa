@@ -112,9 +112,13 @@ public class IncassoSheet extends BottomSheetDialogFragment {
 
     private void compila(View view, Alunno alunno, long versato, long quota, boolean primaApertura) {
         ((TextView) view.findViewById(R.id.nome)).setText(alunno.nome);
-        ((TextView) view.findViewById(R.id.situazione)).setText(quota > 0
+        String situazione = quota > 0
                 ? getString(R.string.incasso_situazione, Money.format(versato), Money.format(quota))
-                : getString(R.string.incasso_situazione_senza_quota, Money.format(versato)));
+                : getString(R.string.incasso_situazione_senza_quota, Money.format(versato));
+        if (alunno.note != null && !alunno.note.isEmpty()) {
+            situazione += "\n" + alunno.note;
+        }
+        ((TextView) view.findViewById(R.id.situazione)).setText(situazione);
 
         long residuo = StatoPagamento.residuo(versato, quota);
         ChipGroup rapidi = view.findViewById(R.id.importi_rapidi);

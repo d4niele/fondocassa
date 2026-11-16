@@ -54,8 +54,15 @@ class FakeRange {
     return this;
   }
 
+  setBackground(colore) {
+    this.sheet.sfondi[`${this.row},${this.col}`] = colore;
+    return this;
+  }
+
+  /** Per colonna quando il range parte dalla riga 2 (fogli di servizio), e sempre per cella. */
   setNumberFormat(formato) {
-    this.sheet.formati[this.col] = formato;
+    if (this.row === 2) this.sheet.formati[this.col] = formato;
+    this.sheet.formatiCella[`${this.row},${this.col}`] = formato;
     return this;
   }
 }
@@ -66,6 +73,9 @@ class FakeSheet {
     this.celle = new Map();
     this.formule = {};
     this.formati = {};
+    this.formatiCella = {};
+    this.sfondi = {};
+    this.larghezze = {};
     this.righeBloccate = 0;
   }
 
@@ -113,6 +123,11 @@ class FakeSheet {
 
   setFrozenRows(n) {
     this.righeBloccate = n;
+  }
+
+  setColumnWidth(colonna, larghezza) {
+    this.larghezze[colonna] = larghezza;
+    return this;
   }
 
   /** Per i test: righe di dati (dalla 2) per le prime n colonne. */
@@ -235,6 +250,19 @@ function carica() {
         if (formato === 'yyyy-MM-dd') return giorno;
         const ora = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', timeStyle: 'medium' }).format(data);
         return giorno.replace(/-/g, '') + '-' + ora.replace(/:/g, '');
+      },
+      parseDate: (testo, fuso, formato) => {
+        if (formato !== 'yyyy-MM-dd' || fuso !== 'Europe/Rome') throw new Error('parseDate: caso non previsto');
+        const [anno, mese, giorno] = testo.split('-').map(Number);
+        // Mezzanotte a Roma: UTC+1 d'inverno, UTC+2 d'estate.
+        for (const ore of [1, 2]) {
+          const istante = new Date(Date.UTC(anno, mese - 1, giorno) - ore * 3600000);
+          const locale = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: 'Europe/Rome', dateStyle: 'short', timeStyle: 'medium',
+          }).format(istante);
+          if (locale === `${testo} 00:00:00`) return istante;
+        }
+        throw new Error('parseDate: data non valida ' + testo);
       },
       getUuid: () => `00000000-0000-4000-8000-${String(++uuid).padStart(12, '0')}`,
     },

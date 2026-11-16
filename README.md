@@ -102,6 +102,7 @@ Vista_Classe  solo formule sui fogli sopra
 ```
 
 - I fogli `Sync_*` sono le tabelle grezze, 1:1 con SQLite: **non vanno modificati a mano** (ogni riga ha anche `timestamp_sync`).
+- Date (`gg/mm/aaaa`), importi in euro e data dell'ultima sincronizzazione sono formattati per la lettura, e le colonne hanno larghezze adatte al contenuto. I fogli creati da una versione precedente vengono riformattati da soli alla prima sincronizzazione dopo l'aggiornamento di `Code.gs`; da lì in poi le larghezze che cambi a mano restano.
 - `Vista_Classe` contiene solo formule: bilancio (quota per alunno, previsto, versato, da versare, spese, cassa reale e virtuale), stato di ogni alunno e registro delle uscite con il link al giustificativo. Si aggiorna da sola a ogni sincronizzazione.
 
 ### Backup completo

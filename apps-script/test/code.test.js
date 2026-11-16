@@ -23,6 +23,9 @@ const spesa = {
   url_giustificativo: 'https://drive.google.com/file/d/0/view',
 };
 
+/** Come il foglio conserva una data: la mezzanotte di quel giorno a Roma (fuso del finto foglio). */
+const giorno = (iso) => new Date(iso + (iso >= '2026-03-29' && iso < '2026-10-25' ? 'T00:00:00+02:00' : 'T00:00:00+01:00'));
+
 test('senza token configurato ogni richiesta viene rifiutata', () => {
   const env = carica();
   const r = env.get({ action: 'ping', token: 'qualcosa' });
@@ -67,20 +70,21 @@ test('sync inserisce i record nei fogli di servizio e conferma gli id', () => {
   assert.deepEqual(r.spese, ['s1']);
   assert.match(r.timestamp_sync, /^\d{4}-\d{2}-\d{2}T/);
 
-  // L'anagrafica è tenuta in ordine alfabetico.
+  // L'anagrafica è tenuta in ordine alfabetico; date e ora di sync sono date vere del foglio.
+  const quando = new Date(r.timestamp_sync);
   assert.deepEqual(env.ss.getSheetByName('Sync_Alunni').dati(5), [
-    ['a1', 'Anna Rossi', true, 'Genitori: Paola e Luca', r.timestamp_sync],
-    ['a2', 'Marco Verdi', true, '', r.timestamp_sync],
+    ['a1', 'Anna Rossi', true, 'Genitori: Paola e Luca', quando],
+    ['a2', 'Marco Verdi', true, '', quando],
   ]);
   // Nel foglio gli importi sono in euro.
   assert.deepEqual(env.ss.getSheetByName('Sync_Quote').dati(5), [
-    ['q1', 'Quota di avvio', 5, '2026-09-15', r.timestamp_sync],
+    ['q1', 'Quota di avvio', 5, giorno('2026-09-15'), quando],
   ]);
   assert.deepEqual(env.ss.getSheetByName('Sync_Entrate').dati(7), [
-    ['e1', 'a1', '2026-09-20', 5, 'Contante', '', r.timestamp_sync],
+    ['e1', 'a1', giorno('2026-09-20'), 5, 'Contante', '', quando],
   ]);
   assert.deepEqual(env.ss.getSheetByName('Sync_Spese').dati(7), [
-    ['s1', 'Gessi', 'Materiale', '2026-10-01', 3.5, 'https://drive.google.com/file/d/0/view', r.timestamp_sync],
+    ['s1', 'Gessi', 'Materiale', giorno('2026-10-01'), 3.5, 'https://drive.google.com/file/d/0/view', quando],
   ]);
   assert.equal(env.lock.presi, 1);
   assert.equal(env.lock.rilasciati, 1);
@@ -123,6 +127,82 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
     ['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']);
 });
 
+test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto serve', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna], spese: [spesa] });
+
+  const spese = env.ss.getSheetByName('Sync_Spese');
+  assert.equal(spese.formati[1], '@');
+  assert.equal(spese.formati[4], 'dd/mm/yyyy');
+  assert.equal(spese.formati[5], '#,##0.00" €"');
+  assert.equal(spese.formati[7], 'dd/mm/yyyy hh:mm');
+  assert.equal(spese.righeBloccate, 1);
+  assert.ok(spese.sfondi['1,1'], 'intestazione evidenziata');
+  assert.ok(spese.larghezze[2] > spese.larghezze[1], 'la descrizione è più larga della chiave');
+  assert.equal(Object.keys(spese.larghezze).length, 7);
+  // Anche la colonna collegata (nome dell'alunno) ha la sua larghezza.
+  assert.equal(Object.keys(env.ss.getSheetByName('Sync_Entrate').larghezze).length, 8);
+
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  assert.equal(vista.formatiCella['2,2'], '#,##0.00" €"');
+  assert.equal(vista.formatiCella['3,2'], '0', 'il numero di alunni non è un importo');
+  assert.equal(vista.formatiCella['10,2'], 'dd/mm/yyyy hh:mm');
+  assert.equal(vista.formatiCella['13,6'], 'dd/mm/yyyy');
+  assert.equal(Object.keys(vista.larghezze).length, 10);
+});
+
+test('un foglio creato da una versione precedente viene riformattato una volta sola', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', entrate: [entrata], spese: [spesa] });
+  // Stato lasciato dalla versione precedente: date e timestamp come testo, nessuna larghezza.
+  const entrate = env.ss.getSheetByName('Sync_Entrate');
+  entrate.scrivi(2, 3, '2026-09-20');
+  entrate.scrivi(2, 7, '2026-11-16T09:00:00.000Z');
+  entrate.formati = {};
+  entrate.larghezze = {};
+  env.proprieta.delete('FORMATO_FOGLI');
+
+  // Una sync che non tocca le entrate deve comunque sistemarle.
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
+
+  assert.deepEqual(entrate.cella(2, 3), giorno('2026-09-20'));
+  assert.deepEqual(entrate.cella(2, 7), new Date('2026-11-16T09:00:00.000Z'));
+  assert.equal(entrate.formati[3], 'dd/mm/yyyy');
+  assert.equal(Object.keys(entrate.larghezze).length, 8);
+  const r = env.get({ action: 'export_all', token: TOKEN });
+  assert.equal(r.entrate[0].data, '2026-09-20');
+  assert.equal(r.entrate[0].timestamp_sync, '2026-11-16T09:00:00.000Z');
+
+  // Dalla volta successiva non si riformatta più: le larghezze scelte a mano restano.
+  entrate.larghezze[2] = 42;
+  env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
+  assert.equal(entrate.larghezze[2], 42);
+});
+
+test('un errore nella formattazione non impedisce di salvare i dati', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
+  env.proprieta.delete('FORMATO_FOGLI');
+  env.ss.getSheetByName('Sync_Alunni').setColumnWidth = () => {
+    throw new Error('Servizio non disponibile');
+  };
+
+  const r = env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
+
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.alunni, ['a2']);
+  assert.equal(env.ss.getSheetByName('Sync_Alunni').dati(5).length, 2);
+});
+
+test('una data non valida resta testo invece di far fallire la sync', () => {
+  const env = ambiente();
+  const r = env.post({ token: TOKEN, action: 'sync', entrate: [{ ...entrata, data: 'ieri' }, { ...entrata, id_transazione: 'e2', data: '' }] });
+  assert.equal(r.ok, true);
+  const righe = env.ss.getSheetByName('Sync_Entrate').dati(7);
+  assert.equal(righe[0][2], 'ieri');
+  assert.equal(righe[1][2], '');
+});
+
 test('ogni sync aggiorna la data in Vista_Classe senza ricrearla', () => {
   const env = ambiente();
   env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
@@ -132,7 +212,7 @@ test('ogni sync aggiorna la data in Vista_Classe senza ricrearla', () => {
   const r = env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
 
   assert.equal(env.ss.getSheetByName('Vista_Classe'), vista);
-  assert.equal(vista.cella(10, 2), r.timestamp_sync);
+  assert.deepEqual(vista.cella(10, 2), new Date(r.timestamp_sync));
   assert.equal(vista.cella(1, 4), 'nota del rappresentante');
 });
 
@@ -147,7 +227,7 @@ test('upsert: un id già presente viene aggiornato, non duplicato', () => {
 
   const righe = env.ss.getSheetByName('Sync_Entrate').dati(7);
   assert.equal(righe.length, 2);
-  assert.deepEqual(righe[0].slice(0, 5), ['e1', 'a1', '2026-09-20', 7.5, 'Bonifico']);
+  assert.deepEqual(righe[0].slice(0, 5), ['e1', 'a1', giorno('2026-09-20'), 7.5, 'Bonifico']);
   assert.equal(righe[1][0], 'e2');
 });
 

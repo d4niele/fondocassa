@@ -33,40 +33,53 @@ var MAX_BYTE_ALLEGATO = 20 * 1024 * 1024;
 
 /**
  * Descrizione dei fogli di servizio: l'ordine delle colonne è quello del foglio.
- * tipo: 'testo' | 'data' | 'euro' (centesimi nel JSON, euro nel foglio) | 'bool'
+ * tipo: 'testo' | 'data' (ISO nel JSON, data vera nel foglio) | 'euro' (centesimi nel JSON,
+ *       euro nel foglio) | 'bool' | 'istante' (data e ora dell'ultima sincronizzazione)
+ * larghezza: in pixel; le chiavi tecniche restano strette, i testi da leggere larghi.
  */
+var FORMATI = {
+  testo: '@',
+  data: 'dd/mm/yyyy',
+  euro: '#,##0.00" €"',
+  istante: 'dd/mm/yyyy hh:mm'
+};
+var COLORE_INTESTAZIONE = '#e8eef7';
+var LARGHEZZA_COLLEGATA = 200;
+// Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
+var PROP_FORMATO = 'FORMATO_FOGLI';
+var VERSIONE_FORMATO = '2';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
     colonne: [
-      { nome: 'alunno_id', tipo: 'testo' },
-      { nome: 'nome', tipo: 'testo' },
-      { nome: 'attivo', tipo: 'bool' },
-      { nome: 'note', tipo: 'testo' },
-      { nome: 'timestamp_sync', tipo: 'testo' }
+      { nome: 'alunno_id', tipo: 'testo', larghezza: 90 },
+      { nome: 'nome', tipo: 'testo', larghezza: 220 },
+      { nome: 'attivo', tipo: 'bool', larghezza: 70 },
+      { nome: 'note', tipo: 'testo', larghezza: 260 },
+      { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
     ],
     ordinaPer: 'nome'
   },
   quote: {
     foglio: 'Sync_Quote',
     colonne: [
-      { nome: 'id_quota', tipo: 'testo' },
-      { nome: 'descrizione', tipo: 'testo' },
-      { nome: 'importo', json: 'importo_cent', tipo: 'euro' },
-      { nome: 'data', tipo: 'data' },
-      { nome: 'timestamp_sync', tipo: 'testo' }
+      { nome: 'id_quota', tipo: 'testo', larghezza: 90 },
+      { nome: 'descrizione', tipo: 'testo', larghezza: 280 },
+      { nome: 'importo', json: 'importo_cent', tipo: 'euro', larghezza: 110 },
+      { nome: 'data', tipo: 'data', larghezza: 100 },
+      { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
     ]
   },
   entrate: {
     foglio: 'Sync_Entrate',
     colonne: [
-      { nome: 'id_transazione', tipo: 'testo' },
-      { nome: 'alunno_id', tipo: 'testo' },
-      { nome: 'data', tipo: 'data' },
-      { nome: 'importo', json: 'importo_cent', tipo: 'euro' },
-      { nome: 'metodo', tipo: 'testo' },
-      { nome: 'note', tipo: 'testo' },
-      { nome: 'timestamp_sync', tipo: 'testo' }
+      { nome: 'id_transazione', tipo: 'testo', larghezza: 90 },
+      { nome: 'alunno_id', tipo: 'testo', larghezza: 90 },
+      { nome: 'data', tipo: 'data', larghezza: 100 },
+      { nome: 'importo', json: 'importo_cent', tipo: 'euro', larghezza: 110 },
+      { nome: 'metodo', tipo: 'testo', larghezza: 120 },
+      { nome: 'note', tipo: 'testo', larghezza: 260 },
+      { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
     ],
     // Colonna di sola lettura, fuori dalla tabella 1:1: il nome dell'alunno dalla sua chiave.
     collegata: {
@@ -77,13 +90,13 @@ var TABELLE = {
   spese: {
     foglio: 'Sync_Spese',
     colonne: [
-      { nome: 'id_spesa', tipo: 'testo' },
-      { nome: 'descrizione', tipo: 'testo' },
-      { nome: 'categoria', tipo: 'testo' },
-      { nome: 'data', tipo: 'data' },
-      { nome: 'importo', json: 'importo_cent', tipo: 'euro' },
-      { nome: 'url_giustificativo', tipo: 'testo' },
-      { nome: 'timestamp_sync', tipo: 'testo' }
+      { nome: 'id_spesa', tipo: 'testo', larghezza: 90 },
+      { nome: 'descrizione', tipo: 'testo', larghezza: 280 },
+      { nome: 'categoria', tipo: 'testo', larghezza: 170 },
+      { nome: 'data', tipo: 'data', larghezza: 100 },
+      { nome: 'importo', json: 'importo_cent', tipo: 'euro', larghezza: 110 },
+      { nome: 'url_giustificativo', tipo: 'testo', larghezza: 300 },
+      { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
     ]
   }
 };
@@ -161,6 +174,11 @@ function verificaToken_(token) {
 /** Upsert dei record ricevuti; quelli con eliminato=true vengono rimossi dal foglio. */
 function sync_(corpo) {
   var ss = cartellaDiLavoro_();
+  try {
+    aggiornaFormato_(ss);
+  } catch (errore) {
+    // La leggibilità del foglio non deve mai impedire di salvare i dati: si riprova alla prossima.
+  }
   var timestamp = new Date().toISOString();
   var risposta = { timestamp_sync: timestamp };
   ORDINE_TABELLE.forEach(function (chiave) {
@@ -296,13 +314,13 @@ function upsert_(ss, tabella, record, timestamp) {
       return String(a[colonna]).toLowerCase().localeCompare(String(b[colonna]).toLowerCase());
     });
   }
-  scriviRighe_(foglio, tabella, righe, quante);
+  scriviRighe_(ss, foglio, tabella, righe, quante);
   return confermati;
 }
 
 function recordInRiga_(tabella, record, timestamp) {
   return tabella.colonne.map(function (colonna) {
-    if (colonna.nome === 'timestamp_sync') {
+    if (colonna.tipo === 'istante') {
       return timestamp;
     }
     var valore = record[nomeJson_(colonna)];
@@ -373,14 +391,46 @@ function leggiRighe_(ss, foglio, tabella) {
     });
 }
 
-function scriviRighe_(foglio, tabella, righe, quantePrima) {
+/**
+ * Scrive le righe: date e istanti, che nel JSON e in memoria sono testo ISO, diventano date vere
+ * del foglio, così si leggono nel formato locale e si possono ordinare e filtrare.
+ */
+function scriviRighe_(ss, foglio, tabella, righe, quantePrima) {
   var larghezza = tabella.colonne.length;
   if (righe.length) {
-    foglio.getRange(2, 1, righe.length, larghezza).setValues(righe);
+    var fuso = ss.getSpreadsheetTimeZone();
+    var valori = righe.map(function (riga) {
+      return riga.map(function (cella, i) {
+        var tipo = tabella.colonne[i].tipo;
+        return tipo === 'data' ? inData_(cella, fuso) : tipo === 'istante' ? inIstante_(cella) : cella;
+      });
+    });
+    foglio.getRange(2, 1, righe.length, larghezza).setValues(valori);
   }
   if (quantePrima > righe.length) {
     foglio.getRange(2 + righe.length, 1, quantePrima - righe.length, larghezza).clearContent();
   }
+}
+
+/** "2026-11-16" → mezzanotte di quel giorno nel fuso del foglio; ciò che non è una data ISO resta com'è. */
+function inData_(valore, fuso) {
+  if (typeof valore !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valore)) {
+    return valore;
+  }
+  try {
+    return Utilities.parseDate(valore, fuso, 'yyyy-MM-dd');
+  } catch (errore) {
+    return valore;
+  }
+}
+
+/** Timestamp ISO → data e ora del foglio; ciò che non lo è resta com'è. */
+function inIstante_(valore) {
+  if (typeof valore !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(valore)) {
+    return valore;
+  }
+  var istante = new Date(valore);
+  return isNaN(istante.getTime()) ? valore : istante;
 }
 
 /** Restituisce il foglio della tabella, creandolo con intestazioni e formati se manca. */
@@ -393,22 +443,59 @@ function foglio_(ss, tabella) {
   var titoli = tabella.colonne.map(function (colonna) {
     return colonna.nome;
   });
-  foglio.getRange(1, 1, 1, titoli.length).setValues([titoli]).setFontWeight('bold');
-  foglio.setFrozenRows(1);
-  tabella.colonne.forEach(function (colonna, i) {
-    // Testo semplice per chiavi, date e timestamp: Sheets non deve reinterpretarli.
-    if (colonna.tipo === 'testo' || colonna.tipo === 'data') {
-      foglio.getRange(2, i + 1, foglio.getMaxRows() - 1, 1).setNumberFormat('@');
-    } else if (colonna.tipo === 'euro') {
-      foglio.getRange(2, i + 1, foglio.getMaxRows() - 1, 1).setNumberFormat('#,##0.00');
-    }
-  });
+  foglio.getRange(1, 1, 1, titoli.length).setValues([titoli]);
   if (tabella.collegata) {
     var colonnaExtra = tabella.colonne.length + 1;
-    foglio.getRange(1, colonnaExtra).setValue(tabella.collegata.titolo).setFontWeight('bold');
+    foglio.getRange(1, colonnaExtra).setValue(tabella.collegata.titolo);
     foglio.getRange(2, colonnaExtra).setFormula(tabella.collegata.formula);
   }
+  formattaFoglio_(foglio, tabella);
   return foglio;
+}
+
+/** Formati, larghezze e intestazione di un foglio di servizio. Si può rieseguire senza danni. */
+function formattaFoglio_(foglio, tabella) {
+  var quante = tabella.colonne.length + (tabella.collegata ? 1 : 0);
+  var righe = foglio.getMaxRows() - 1;
+  foglio.getRange(1, 1, 1, quante).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
+  foglio.setFrozenRows(1);
+  tabella.colonne.forEach(function (colonna, i) {
+    // Le chiavi e i testi restano testo semplice: Sheets non deve reinterpretarli.
+    if (FORMATI[colonna.tipo] && righe > 0) {
+      foglio.getRange(2, i + 1, righe, 1).setNumberFormat(FORMATI[colonna.tipo]);
+    }
+    foglio.setColumnWidth(i + 1, colonna.larghezza);
+  });
+  if (tabella.collegata) {
+    foglio.setColumnWidth(quante, LARGHEZZA_COLLEGATA);
+  }
+}
+
+/**
+ * Porta i fogli creati da una versione precedente al formato attuale: una volta sola, perché
+ * riformattare a ogni sincronizzazione la rallenterebbe. Le date salvate come testo vengono
+ * riscritte come date vere.
+ */
+function aggiornaFormato_(ss) {
+  var proprieta = PropertiesService.getScriptProperties();
+  if (proprieta.getProperty(PROP_FORMATO) === VERSIONE_FORMATO) {
+    return;
+  }
+  ORDINE_TABELLE.forEach(function (chiave) {
+    var tabella = TABELLE[chiave];
+    var foglio = ss.getSheetByName(tabella.foglio);
+    if (!foglio) {
+      return; // verrà creato già nel formato attuale
+    }
+    formattaFoglio_(foglio, tabella);
+    var righe = leggiRighe_(ss, foglio, tabella);
+    scriviRighe_(ss, foglio, tabella, righe, righe.length);
+  });
+  var vista = ss.getSheetByName(FOGLIO_VISTA);
+  if (vista) {
+    formattaVista_(vista);
+  }
+  proprieta.setProperty(PROP_FORMATO, VERSIONE_FORMATO);
 }
 
 // ---------------------------------------------------------------------------
@@ -420,7 +507,30 @@ var VISTA_RIGA_TABELLE = 13;
 
 function aggiornaVista_(ss, timestamp) {
   var vista = ss.getSheetByName(FOGLIO_VISTA) || creaVista_(ss);
-  vista.getRange(VISTA_CELLA_AGGIORNAMENTO).setValue(timestamp);
+  vista.getRange(VISTA_CELLA_AGGIORNAMENTO).setValue(inIstante_(timestamp));
+}
+
+var VISTA_LARGHEZZE = [260, 130, 120, 110, 30, 100, 170, 280, 110, 300];
+
+/** Formati e larghezze di Vista_Classe: importi in euro, date leggibili. Si può rieseguire. */
+function formattaVista_(vista) {
+  var r = VISTA_RIGA_TABELLE;
+  var righe = vista.getMaxRows() - r + 1;
+  vista.getRange('A1').setFontWeight('bold');
+  vista.getRange('B2:B9').setNumberFormat(FORMATI.euro);
+  vista.getRange('B3').setNumberFormat('0');
+  vista.getRange(VISTA_CELLA_AGGIORNAMENTO).setNumberFormat(FORMATI.istante);
+  vista.getRange(r - 1, 1, 1, 4).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
+  vista.getRange(r - 1, 6, 1, 5).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
+  if (righe > 0) {
+    vista.getRange(r, 2, righe, 2).setNumberFormat(FORMATI.euro);
+    vista.getRange(r, 6, righe, 1).setNumberFormat(FORMATI.data);
+    vista.getRange(r, 9, righe, 1).setNumberFormat(FORMATI.euro);
+  }
+  VISTA_LARGHEZZE.forEach(function (larghezza, i) {
+    vista.setColumnWidth(i + 1, larghezza);
+  });
+  vista.setFrozenRows(r - 1);
 }
 
 function creaVista_(ss) {
@@ -431,7 +541,7 @@ function creaVista_(ss) {
   var vista = ss.insertSheet(FOGLIO_VISTA, 0);
   var r = VISTA_RIGA_TABELLE;
 
-  vista.getRange('A1').setValue('Fondocassa di classe').setFontWeight('bold');
+  vista.getRange('A1').setValue('Fondocassa di classe');
   vista.getRange('A2:A10').setValues([
     ['Quota per alunno'],
     ['Alunni attivi'],
@@ -475,12 +585,10 @@ function creaVista_(ss) {
     vista.getRange(f[0]).setFormula(f[1]);
   });
 
-  vista.getRange(r - 1, 1, 1, 4)
-    .setValues([['Alunno', 'Totale versato', 'Da versare', 'Stato']]).setFontWeight('bold');
+  vista.getRange(r - 1, 1, 1, 4).setValues([['Alunno', 'Totale versato', 'Da versare', 'Stato']]);
   vista.getRange(r - 1, 6, 1, 5)
-    .setValues([['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']])
-    .setFontWeight('bold');
-  vista.setFrozenRows(r - 1);
+    .setValues([['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']]);
+  formattaVista_(vista);
   return vista;
 }
 
@@ -546,6 +654,7 @@ function setup() {
   if (!ss.getSheetByName(FOGLIO_VISTA)) {
     creaVista_(ss);
   }
+  aggiornaFormato_(ss);
   var cartella = cartellaGiustificativi_();
   Logger.log('Token segreto da inserire nell\'app: ' + token);
   Logger.log('Cartella giustificativi: ' + cartella.getUrl());

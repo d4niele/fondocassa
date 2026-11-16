@@ -77,20 +77,35 @@ public class MainActivity extends BaseActivity {
         syncInCorso = true;
         avviso(getString(R.string.sync_in_corso));
         app.io().execute(() -> {
-            String messaggio;
+            String messaggio = null;
+            String titoloErrore = null;
+            String errore = null;
             try {
                 SyncManager.Esito esito = SyncManager.crea(app.db(), app.settings()).sincronizza();
-                messaggio = esito.inviati == 0 && esito.giustificativiCaricati == 0
-                        ? getString(R.string.sync_nulla)
-                        : getString(R.string.sync_ok, esito.inviati);
+                if (esito.giustificativiFalliti > 0) {
+                    titoloErrore = getString(R.string.sync_giustificativi_titolo);
+                    errore = getString(R.string.sync_giustificativi_errore,
+                            esito.giustificativiFalliti, esito.erroreGiustificativi);
+                } else {
+                    messaggio = esito.inviati == 0 && esito.giustificativiCaricati == 0
+                            ? getString(R.string.sync_nulla)
+                            : getString(R.string.sync_ok, esito.inviati);
+                }
             } catch (IOException e) {
-                messaggio = getString(R.string.sync_errore, e.getMessage());
+                titoloErrore = getString(R.string.sync_errore_titolo);
+                errore = e.getMessage();
             }
             String finale = messaggio;
+            String titoloFinale = titoloErrore;
+            String erroreFinale = errore;
             runOnUiThread(() -> {
                 syncInCorso = false;
                 if (!isFinishing() && !isDestroyed()) {
-                    avviso(finale);
+                    if (titoloFinale != null) {
+                        mostraErrore(titoloFinale, erroreFinale);
+                    } else {
+                        avviso(finale);
+                    }
                     // Aggiorna "ultima sincronizzazione" nel riepilogo.
                     Fragment attuale = getSupportFragmentManager().findFragmentById(R.id.contenuto);
                     if (attuale instanceof RiepilogoFragment) {

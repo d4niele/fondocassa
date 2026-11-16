@@ -132,7 +132,7 @@ singoli, importa solo le colonne che vuoi (es. `Vista_Classe!A1:B10` per il solo
 
 - Ogni richiesta porta un **token segreto** verificato come prima istruzione dello script; senza token non si legge né si scrive nulla. Per cambiarlo esegui `rigeneraToken` nell'editor.
 - Il traffico è solo HTTPS. Token e PIN (salvato come hash PBKDF2) stanno nella memoria privata dell'app, esclusa dai backup di Android.
-- I giustificativi su Drive sono visibili in sola lettura a chi ha il link.
+- I giustificativi su Drive sono visibili in sola lettura a chi ha il link. Se l'account è Google Workspace (scuola, azienda) e vieta la condivisione pubblica, restano visibili solo nel dominio o, se nemmeno questo è permesso, solo a te.
 
 ## Sviluppo
 

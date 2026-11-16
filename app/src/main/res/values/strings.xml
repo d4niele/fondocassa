@@ -33,7 +33,10 @@
     <string name="sync_in_corso">Sincronizzazione in corso…</string>
     <string name="sync_ok">Sincronizzazione completata: %1$d record inviati</string>
     <string name="sync_nulla">Tutto già sincronizzato</string>
-    <string name="sync_errore">Sincronizzazione non riuscita: %1$s</string>
+    <string name="sync_errore_titolo">Sincronizzazione non riuscita</string>
+    <string name="sync_giustificativi_titolo">Ricevute non caricate</string>
+    <string name="sync_giustificativi_errore">I dati sono stati sincronizzati, tranne le spese con una ricevuta che Drive non ha accettato (%1$d). Ricevute e spese restano sul telefono e verranno riproposte alla prossima sincronizzazione.\n\nRisposta dello script:\n%2$s</string>
+    <string name="errore_sconosciuto">Errore sconosciuto</string>
     <string name="sync_non_configurata">Configura URL e token dello script nelle Impostazioni</string>
 
     <string name="vuoto_alunni">Nessun alunno. Tocca + per aggiungere la classe.</string>
@@ -104,7 +107,7 @@
     <string name="impostazioni_prova">Prova connessione</string>
     <string name="impostazioni_salvate">Impostazioni salvate</string>
     <string name="connessione_ok">Connessione riuscita</string>
-    <string name="connessione_errore">Connessione non riuscita: %1$s</string>
+    <string name="connessione_errore_titolo">Connessione non riuscita</string>
     <string name="errore_https">L\'URL deve iniziare con https://</string>
     <string name="impostazioni_backup">Backup e ripristino</string>
     <string name="ripristina">Ripristina dati da Google Sheets</string>
@@ -112,12 +115,12 @@
     <string name="ripristina_conferma_pendenti">Attenzione: ci sono %1$d record non ancora sincronizzati che andranno persi. Tutti i dati presenti su questo dispositivo verranno sostituiti con quelli del foglio Google.</string>
     <string name="ripristina_in_corso">Ripristino in corso…</string>
     <string name="ripristina_ok">Ripristino completato: %1$d record importati</string>
-    <string name="ripristina_errore">Ripristino non riuscito: %1$s</string>
+    <string name="ripristina_errore_titolo">Ripristino non riuscito</string>
     <string name="esporta_backup">Esporta backup su Google Drive</string>
     <string name="backup_in_corso">Creazione del backup in corso…</string>
     <string name="backup_ok">Backup salvato su Drive</string>
     <string name="backup_dettaglio">%1$s\n\nContiene il database e %2$d giustificativi. Lo trovi nella cartella Fondocassa_Backup.</string>
-    <string name="backup_errore">Backup non riuscito: %1$s</string>
+    <string name="backup_errore_titolo">Backup non riuscito</string>
     <string name="impostazioni_sicurezza">Sicurezza</string>
     <string name="cambia_pin">Cambia PIN</string>
     <string name="usa_biometria">Sblocca con impronta o volto</string>

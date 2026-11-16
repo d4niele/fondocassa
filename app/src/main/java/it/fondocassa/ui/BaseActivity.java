@@ -5,15 +5,20 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.time.LocalDate;
 
 import it.fondocassa.FondocassaApp;
+import it.fondocassa.R;
 import it.fondocassa.util.Date;
 
 /** Activity protetta dal PIN: se l'app è bloccata mostra prima la schermata di sblocco. */
@@ -56,6 +61,25 @@ public abstract class BaseActivity extends AppCompatActivity {
     private static void impostaData(EditText campo, String iso) {
         campo.setTag(iso);
         campo.setText(Date.mostra(iso));
+    }
+
+    /**
+     * Mostra un errore in una finestra: a differenza dell'avviso in basso resta aperta finché
+     * non la si chiude, non tronca il testo e permette di selezionarlo e copiarlo.
+     */
+    protected void mostraErrore(String titolo, String dettaglio) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(titolo)
+                .setMessage(dettaglio == null || dettaglio.isEmpty() ? getString(R.string.errore_sconosciuto) : dettaglio)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+        TextView messaggio = dialog.findViewById(android.R.id.message);
+        if (messaggio != null) {
+            messaggio.setTextIsSelectable(true);
+        }
     }
 
     public static String testo(EditText campo) {

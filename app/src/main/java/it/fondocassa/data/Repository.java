@@ -24,6 +24,13 @@ public class Repository {
         this.orologio = orologio;
     }
 
+    /*
+     * Le eliminazioni non cancellano mai subito la riga: il record viene marcato eliminato e resta
+     * in attesa finché lo script non conferma di averlo tolto dal foglio. Non ci si può fidare di
+     * timestamp_sync per sapere se il record è già sul foglio: un invio in corso, o una risposta
+     * persa, lo lasciano vuoto anche quando la riga è stata scritta.
+     */
+
     public static String nuovoId() {
         return UUID.randomUUID().toString();
     }
@@ -58,15 +65,11 @@ public class Repository {
         if (db.entrate().contaPerAlunno(id) > 0) {
             return false;
         }
-        if (maiSincronizzato(alunno.timestampSync)) {
-            db.alunni().delete(id);
-        } else {
-            alunno.eliminato = true;
-            alunno.synced = false;
-            alunno.aggiornato = orologio.getAsLong();
-            db.alunni().upsert(alunno);
-            onModifica.run();
-        }
+        alunno.eliminato = true;
+        alunno.synced = false;
+        alunno.aggiornato = orologio.getAsLong();
+        db.alunni().upsert(alunno);
+        onModifica.run();
         return true;
     }
 
@@ -88,15 +91,11 @@ public class Repository {
         if (quota == null) {
             return;
         }
-        if (maiSincronizzato(quota.timestampSync)) {
-            db.quote().delete(id);
-        } else {
-            quota.eliminato = true;
-            quota.synced = false;
-            quota.aggiornato = orologio.getAsLong();
-            db.quote().upsert(quota);
-            onModifica.run();
-        }
+        quota.eliminato = true;
+        quota.synced = false;
+        quota.aggiornato = orologio.getAsLong();
+        db.quote().upsert(quota);
+        onModifica.run();
     }
 
     // --- Entrate ---
@@ -117,15 +116,11 @@ public class Repository {
         if (entrata == null) {
             return;
         }
-        if (maiSincronizzato(entrata.timestampSync)) {
-            db.entrate().delete(id);
-        } else {
-            entrata.eliminato = true;
-            entrata.synced = false;
-            entrata.aggiornato = orologio.getAsLong();
-            db.entrate().upsert(entrata);
-            onModifica.run();
-        }
+        entrata.eliminato = true;
+        entrata.synced = false;
+        entrata.aggiornato = orologio.getAsLong();
+        db.entrate().upsert(entrata);
+        onModifica.run();
     }
 
     // --- Spese ---
@@ -147,17 +142,13 @@ public class Repository {
             return;
         }
         cancellaFile(spesa.giustificativoLocale);
-        if (maiSincronizzato(spesa.timestampSync)) {
-            db.spese().delete(id);
-        } else {
-            spesa.eliminato = true;
-            spesa.synced = false;
-            spesa.giustificativoLocale = null;
-            spesa.giustificativoMime = null;
-            spesa.aggiornato = orologio.getAsLong();
-            db.spese().upsert(spesa);
-            onModifica.run();
-        }
+        spesa.eliminato = true;
+        spesa.synced = false;
+        spesa.giustificativoLocale = null;
+        spesa.giustificativoMime = null;
+        spesa.aggiornato = orologio.getAsLong();
+        db.spese().upsert(spesa);
+        onModifica.run();
     }
 
     public static void cancellaFile(String percorso) {
@@ -165,9 +156,5 @@ public class Repository {
             //noinspection ResultOfMethodCallIgnored
             new File(percorso).delete();
         }
-    }
-
-    private static boolean maiSincronizzato(String timestampSync) {
-        return timestampSync == null || timestampSync.isEmpty();
     }
 }

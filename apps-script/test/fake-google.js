@@ -156,12 +156,19 @@ function carica() {
       nome,
       getId: () => 'cartella-' + nome,
       getUrl: () => 'https://drive.google.com/drive/folders/' + nome,
+      cestinata: false,
+      isTrashed() {
+        return this.cestinata;
+      },
       getFiles() {
         const miei = drive.file.filter((f) => f.cartella === nome);
         let i = 0;
         return { hasNext: () => i < miei.length, next: () => miei[i++] };
       },
       createFile(blob) {
+        if (drive.erroreCreazione) {
+          throw new Error(drive.erroreCreazione);
+        }
         const file = {
           ...blob,
           cartella: nome,
@@ -169,6 +176,9 @@ function carica() {
           getName: () => blob.nome,
           getBlob: () => ({ ...blob, setName: (n) => ({ ...blob, nome: n }) }),
           setSharing(accesso, permesso) {
+            if ((drive.accessiVietati || []).includes(accesso)) {
+              throw new Error('Accesso negato: DriveApp.');
+            }
             this.condivisione = [accesso, permesso];
             return this;
           },
@@ -229,10 +239,16 @@ function carica() {
       getUuid: () => `00000000-0000-4000-8000-${String(++uuid).padStart(12, '0')}`,
     },
     DriveApp: {
-      Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK' },
+      Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK', DOMAIN_WITH_LINK: 'DOMAIN_WITH_LINK' },
       Permission: { VIEW: 'VIEW' },
       createFolder: creaCartella,
-      getFolderById: (id) => drive.cartelle.find((c) => c.getId() === id),
+      getFolderById: (id) => {
+        const cartella = drive.cartelle.find((c) => c.getId() === id && !c.eliminata);
+        if (!cartella) {
+          throw new Error('No item with the given ID could be found, or you do not have permission to access it.');
+        }
+        return cartella;
+      },
     },
     Logger: { righe: [], log(m) { this.righe.push(m); } },
   };

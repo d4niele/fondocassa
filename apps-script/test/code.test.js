@@ -243,6 +243,47 @@ test('upload_giustificativo salva il file su Drive in sola lettura e restituisce
   assert.equal(env.drive.file.length, 2);
 });
 
+test('upload_giustificativo riesce anche se l\'account vieta la condivisione pubblica', () => {
+  const env = ambiente();
+  const carica = (id) => env.post({ token: TOKEN, action: 'upload_giustificativo', id_spesa: id, data_base64: 'AA==' });
+
+  env.drive.accessiVietati = ['ANYONE_WITH_LINK'];
+  const nelDominio = carica('s1');
+  assert.equal(nelDominio.ok, true);
+  assert.equal(nelDominio.condivisione, 'dominio');
+  assert.deepEqual(env.drive.file[0].condivisione, ['DOMAIN_WITH_LINK', 'VIEW']);
+
+  env.drive.accessiVietati = ['ANYONE_WITH_LINK', 'DOMAIN_WITH_LINK'];
+  const privato = carica('s2');
+  assert.equal(privato.ok, true);
+  assert.equal(privato.condivisione, 'privato');
+  assert.match(privato.url, /^https:/);
+  assert.equal(env.drive.file[1].condivisione, null);
+});
+
+test('upload_giustificativo ricrea la cartella se è stata eliminata o cestinata', () => {
+  const env = ambiente();
+  const carica = (id) => env.post({ token: TOKEN, action: 'upload_giustificativo', id_spesa: id, data_base64: 'AA==' });
+  assert.equal(carica('s1').ok, true);
+
+  env.drive.cartelle[0].eliminata = true;
+  assert.equal(carica('s2').ok, true);
+  assert.equal(env.drive.cartelle.length, 2);
+
+  env.drive.cartelle[1].cestinata = true;
+  assert.equal(carica('s3').ok, true);
+  assert.equal(env.drive.cartelle.length, 3);
+});
+
+test('upload_giustificativo spiega cosa fare se Drive non è autorizzato', () => {
+  const env = ambiente();
+  env.drive.erroreCreazione = 'You do not have permission to call DriveApp.Folder.createFile.';
+  const r = env.post({ token: TOKEN, action: 'upload_giustificativo', id_spesa: 's1', data_base64: 'AA==' });
+  assert.equal(r.ok, false);
+  assert.match(r.error, /esegui la funzione setup/);
+  assert.match(r.error, /You do not have permission to call DriveApp/);
+});
+
 test('upload_giustificativo senza dati viene rifiutato', () => {
   const env = ambiente();
   const r = env.post({ token: TOKEN, action: 'upload_giustificativo', id_spesa: 's1' });

@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import it.fondocassa.data.Alunno;
 import it.fondocassa.data.AppDatabase;
@@ -35,11 +37,24 @@ public class SyncManager {
     public static class Esito {
         public final int inviati;
         public final int giustificativiCaricati;
+        /** Allegati che lo script ha rifiutato: le relative spese restano in attesa. */
+        public final int giustificativiFalliti;
+        /** Messaggio dello script per il primo allegato rifiutato, o null. */
+        public final String erroreGiustificativi;
 
-        Esito(int inviati, int giustificativiCaricati) {
+        Esito(int inviati, Upload upload) {
             this.inviati = inviati;
-            this.giustificativiCaricati = giustificativiCaricati;
+            this.giustificativiCaricati = upload.caricati;
+            this.giustificativiFalliti = upload.falliti.size();
+            this.erroreGiustificativi = upload.errore;
         }
+    }
+
+    /** Risultato del caricamento degli allegati. */
+    private static class Upload {
+        int caricati;
+        final Set<String> falliti = new HashSet<>();
+        String errore;
     }
 
     private final AppDatabase db;
@@ -59,14 +74,17 @@ public class SyncManager {
     /** Invia i record non sincronizzati; in caso di errore restano in attesa per il tentativo successivo. */
     public Esito sincronizza() throws IOException {
         synchronized (LOCK) {
-            int caricati = caricaGiustificativi();
+            Upload upload = caricaGiustificativi();
 
             List<Alunno> alunni = db.alunni().pendenti();
             List<Quota> quote = db.quote().pendenti();
             List<Entrata> entrate = db.entrate().pendenti();
             List<Spesa> spese = db.spese().pendenti();
+            // Una spesa il cui allegato non è stato caricato resta in attesa: verrà riproposta
+            // con il suo file alla prossima sincronizzazione, senza bloccare tutto il resto.
+            spese.removeIf(s -> upload.falliti.contains(s.id));
             if (alunni.isEmpty() && quote.isEmpty() && entrate.isEmpty() && spese.isEmpty()) {
-                return new Esito(0, caricati);
+                return new Esito(0, upload);
             }
 
             SyncRequest richiesta = new SyncRequest();
@@ -130,13 +148,17 @@ public class SyncManager {
                 db.spese().rimuoviEliminatiSincronizzati();
             });
             settings.setUltimaSync(ts);
-            return new Esito(confermati[0], caricati);
+            return new Esito(confermati[0], upload);
         }
     }
 
-    /** Carica su Drive i giustificativi locali e ne salva l'URL nel record, che resta da sincronizzare. */
-    private int caricaGiustificativi() throws IOException {
-        int caricati = 0;
+    /**
+     * Carica su Drive i giustificativi locali e ne salva l'URL nel record, che resta da sincronizzare.
+     * Un rifiuto dello script (permessi di Drive, file troppo grande…) riguarda il singolo allegato
+     * e viene annotato; un errore di rete invece interrompe la sincronizzazione.
+     */
+    private Upload caricaGiustificativi() throws IOException {
+        Upload upload = new Upload();
         for (Spesa s : db.spese().pendenti()) {
             if (s.eliminato || !s.uploadInAttesa()) {
                 continue;
@@ -146,13 +168,22 @@ public class SyncManager {
                 continue; // file perso: la spesa viene comunque sincronizzata senza allegato
             }
             String mime = s.giustificativoMime == null ? "application/octet-stream" : s.giustificativoMime;
-            String url = api.uploadGiustificativo(s.id, file.getName(), mime, Files.readAllBytes(file.toPath()));
+            String url;
+            try {
+                url = api.uploadGiustificativo(s.id, file.getName(), mime, Files.readAllBytes(file.toPath()));
+            } catch (ApiException e) {
+                upload.falliti.add(s.id);
+                if (upload.errore == null) {
+                    upload.errore = e.getMessage();
+                }
+                continue;
+            }
             if (db.spese().impostaUrlGiustificativo(s.id, s.giustificativoLocale, url) > 0) {
                 Repository.cancellaFile(s.giustificativoLocale);
             }
-            caricati++;
+            upload.caricati++;
         }
-        return caricati;
+        return upload;
     }
 
     /**

@@ -102,13 +102,20 @@ public class DatabaseTest {
     }
 
     @Test
-    public void unRecordMaiSincronizzatoVieneEliminatoSubito() {
+    public void ancheUnRecordSenzaConfermaDiSyncVieneMarcatoENonCancellato() {
+        // Senza conferma non si sa se la riga è già sul foglio (invio in corso, risposta persa):
+        // la cancellazione deve comunque arrivare allo script.
         Alunno a = alunno("Anna");
         Entrata e = entrata(a, 500);
+        int modifichePrima = modifiche;
 
         repo.eliminaEntrata(e.id);
 
-        assertNull(db.entrate().get(e.id));
+        Entrata salvata = db.entrate().get(e.id);
+        assertTrue(salvata.eliminato);
+        assertFalse(salvata.synced);
+        assertEquals(1, db.entrate().pendenti().size());
+        assertEquals(modifichePrima + 1, modifiche);
         assertEquals(0, db.entrate().totale());
     }
 
@@ -174,7 +181,10 @@ public class DatabaseTest {
         repo.eliminaSpesa(s.id);
 
         assertFalse(allegato.exists());
-        assertNull(db.spese().get(s.id));
+        Spesa salvata = db.spese().get(s.id);
+        assertTrue(salvata.eliminato);
+        assertNull(salvata.giustificativoLocale);
+        assertEquals(0, db.spese().totale());
     }
 
     @Test

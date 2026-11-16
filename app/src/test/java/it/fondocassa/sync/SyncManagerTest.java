@@ -191,6 +191,38 @@ public class SyncManagerTest {
     }
 
     @Test
+    public void unAllegatoRifiutatoNonBloccaIlRestoERestaInAttesa() throws Exception {
+        Alunno a = alunno("Anna");
+        File scontrino = File.createTempFile("scontrino", ".jpg");
+        Files.write(scontrino.toPath(), new byte[]{9, 8, 7});
+        Spesa s = new Spesa();
+        s.descrizione = "Gessi";
+        s.importo = 350;
+        s.data = "2026-10-01";
+        s.giustificativoLocale = scontrino.getAbsolutePath();
+        s.giustificativoMime = "image/jpeg";
+        repo.salvaSpesa(s);
+        server.enqueue(new MockResponse().setBody("{\"ok\":false,\"error\":\"Accesso negato: DriveApp.\"}"));
+        server.enqueue(new MockResponse().setBody(conferma(q(a.id), "", "", "")));
+
+        SyncManager.Esito esito = sync.sincronizza();
+
+        assertEquals(1, esito.inviati);
+        assertEquals(0, esito.giustificativiCaricati);
+        assertEquals(1, esito.giustificativiFalliti);
+        assertEquals("Accesso negato: DriveApp.", esito.erroreGiustificativi);
+        server.takeRequest();
+        JsonObject corpo = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        assertEquals(1, corpo.getAsJsonArray("alunni").size());
+        assertEquals("la spesa non parte senza il suo allegato", 0, corpo.getAsJsonArray("spese").size());
+        assertTrue(db.alunni().get(a.id).synced);
+        Spesa salvata = db.spese().get(s.id);
+        assertFalse(salvata.synced);
+        assertTrue(salvata.uploadInAttesa());
+        assertTrue("il file resta sul telefono per il prossimo tentativo", scontrino.exists());
+    }
+
+    @Test
     public void leCancellazioniVengonoPropagateEPoiRimosse() throws Exception {
         Alunno a = alunno("Anna");
         Entrata e = entrata(a, 500);
@@ -204,6 +236,26 @@ public class SyncManagerTest {
 
         JsonObject corpo = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
         assertTrue(corpo.getAsJsonArray("entrate").get(0).getAsJsonObject().get("eliminato").getAsBoolean());
+        assertNull(db.entrate().get(e.id));
+    }
+
+    @Test
+    public void laCancellazioneArrivaAlFoglioAncheSeLaConfermaDellInvioSiEPersa() throws Exception {
+        Alunno a = alunno("Anna");
+        Entrata e = entrata(a, 500);
+        // Lo script riceve (e scrive) la riga, ma la risposta non arriva all'app.
+        server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST));
+        assertThrows(IOException.class, () -> sync.sincronizza());
+        server.takeRequest();
+
+        repo.eliminaEntrata(e.id);
+        server.enqueue(new MockResponse().setBody(conferma(q(a.id), "", q(e.id), "")));
+        sync.sincronizza();
+
+        JsonObject corpo = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        JsonObject inviata = corpo.getAsJsonArray("entrate").get(0).getAsJsonObject();
+        assertEquals(e.id, inviata.get("id_transazione").getAsString());
+        assertTrue(inviata.get("eliminato").getAsBoolean());
         assertNull(db.entrate().get(e.id));
     }
 

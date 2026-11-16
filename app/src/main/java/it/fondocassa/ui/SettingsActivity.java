@@ -113,14 +113,12 @@ public class SettingsActivity extends BaseActivity {
         }
         attesa.setVisibility(View.VISIBLE);
         app().io().execute(() -> {
-            String esito;
             try {
                 new ApiClient(settings.endpoint(), settings.token()).ping();
-                esito = getString(R.string.connessione_ok);
+                mostraEsito(getString(R.string.connessione_ok));
             } catch (IOException e) {
-                esito = getString(R.string.connessione_errore, e.getMessage());
+                mostraFallimento(R.string.connessione_errore_titolo, e);
             }
-            mostraEsito(esito);
         });
     }
 
@@ -158,14 +156,12 @@ public class SettingsActivity extends BaseActivity {
         attesa.setVisibility(View.VISIBLE);
         avviso(getString(R.string.ripristina_in_corso));
         app.io().execute(() -> {
-            String esito;
             try {
                 int importati = SyncManager.crea(app.db(), app.settings()).ripristina();
-                esito = getString(R.string.ripristina_ok, importati);
+                mostraEsito(getString(R.string.ripristina_ok, importati));
             } catch (IOException e) {
-                esito = getString(R.string.ripristina_errore, e.getMessage());
+                mostraFallimento(R.string.ripristina_errore_titolo, e);
             }
-            mostraEsito(esito);
         });
     }
 
@@ -187,7 +183,7 @@ public class SettingsActivity extends BaseActivity {
                         .esportaBackup(getDatabasePath(AppDatabase.NOME_FILE));
                 runOnUiThread(() -> mostraBackup(backup));
             } catch (IOException e) {
-                mostraEsito(getString(R.string.backup_errore, e.getMessage()));
+                mostraFallimento(R.string.backup_errore_titolo, e);
             }
         });
     }
@@ -209,6 +205,13 @@ public class SettingsActivity extends BaseActivity {
                 })
                 .setNegativeButton(android.R.string.ok, null)
                 .show();
+    }
+
+    private void mostraFallimento(int titolo, IOException errore) {
+        runOnUiThread(() -> {
+            attesa.setVisibility(View.GONE);
+            mostraErrore(getString(titolo), errore.getMessage());
+        });
     }
 
     private void mostraEsito(String esito) {

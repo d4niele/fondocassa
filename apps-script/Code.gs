@@ -196,9 +196,37 @@ function uploadGiustificativo_(corpo) {
   }
   var nome = String(corpo.id_spesa) + '_' + nomeSicuro_(corpo.filename || 'giustificativo');
   var blob = Utilities.newBlob(byte, corpo.mime_type || 'application/octet-stream', nome);
-  var file = cartellaGiustificativi_().createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return { url: file.getUrl() };
+  var file;
+  try {
+    file = cartellaGiustificativi_().createFile(blob);
+  } catch (errore) {
+    // I dati passano dal foglio, i file da Drive: sono autorizzazioni distinte.
+    throw new Error('Drive ha rifiutato il salvataggio del file. Apri l\'editor dello script, esegui la '
+      + 'funzione setup e accetta i permessi richiesti per Google Drive. Dettaglio: '
+      + String((errore && errore.message) || errore));
+  }
+  return { url: file.getUrl(), condivisione: condividi_(file) };
+}
+
+/**
+ * Rende il file leggibile a chi ha il link. Gli account Google Workspace (scuola, azienda) possono
+ * vietare la condivisione pubblica: in quel caso si ripiega sul dominio e, se nemmeno quello è
+ * consentito, il file resta privato. L'upload non deve fallire per questo.
+ */
+function condividi_(file) {
+  var tentativi = [
+    ['link', DriveApp.Access.ANYONE_WITH_LINK],
+    ['dominio', DriveApp.Access.DOMAIN_WITH_LINK]
+  ];
+  for (var i = 0; i < tentativi.length; i++) {
+    try {
+      file.setSharing(tentativi[i][1], DriveApp.Permission.VIEW);
+      return tentativi[i][0];
+    } catch (errore) {
+      // criterio di condivisione non consentito: si prova il successivo
+    }
+  }
+  return 'privato';
 }
 
 /**
@@ -478,7 +506,14 @@ function cartella_(proprietaId, nome) {
   var proprieta = PropertiesService.getScriptProperties();
   var id = proprieta.getProperty(proprietaId);
   if (id) {
-    return DriveApp.getFolderById(id);
+    try {
+      var esistente = DriveApp.getFolderById(id);
+      if (esistente && !esistente.isTrashed()) {
+        return esistente;
+      }
+    } catch (errore) {
+      // cartella eliminata o non più accessibile: se ne crea una nuova qui sotto
+    }
   }
   var cartella = DriveApp.createFolder(nome);
   proprieta.setProperty(proprietaId, cartella.getId());

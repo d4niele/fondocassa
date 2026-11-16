@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey;
 /** Quota versata da un alunno (1:1 con il foglio Sync_Entrate). */
 @Entity(tableName = "entrate", indices = {@Index("alunno_id")})
 public class Entrata {
-    public static final String[] METODI = {"Contante", "Satispay", "Bancomat Pay", "Hype", "PayPal", "Bonifico"};
+    public static final String[] METODI = {"Contante", "Satispay", "Bancomat Pay", "Hype", "Postepay", "PayPal", "Bonifico"};
 
     @PrimaryKey
     @NonNull

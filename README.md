@@ -21,7 +21,7 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 | Scheda | A cosa serve |
 |---|---|
 | **Riepilogo** | *In cassa adesso* (versato − spese), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
-| **Alunni** | L'elenco della classe con versato, residuo e stato (*In regola* / *In sospeso*). **Un tocco su un alunno apre l'incasso rapido**: importo già compilato col residuo, metodo (Contante, Satispay, Bancomat Pay, Hype, PayPal, Bonifico), data di oggi → *Registra quota*. |
+| **Alunni** | L'elenco della classe con versato, residuo e stato (*In regola* / *In sospeso*). **Un tocco su un alunno apre l'incasso rapido**: importo già compilato col residuo, metodo (Contante, Satispay, Bancomat Pay, Hype, Postepay, PayPal, Bonifico), data di oggi → *Registra quota*. |
 | **Quote** | Le quote uguali per tutti, ad esempio «Quota di avvio — 5 €». Il dovuto di ogni alunno è la somma delle quote. |
 | **Entrate** | Registro di tutti i versamenti, per correggerli o eliminarli. |
 | **Spese** | Uscite con categoria e giustificativo (foto o PDF). |

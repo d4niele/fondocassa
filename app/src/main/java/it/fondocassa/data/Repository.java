@@ -1,6 +1,7 @@
 package it.fondocassa.data;
 
 import java.io.File;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.LongSupplier;
 
@@ -148,6 +149,30 @@ public class Repository {
         spesa.giustificativoMime = null;
         spesa.aggiornato = orologio.getAsLong();
         db.spese().upsert(spesa);
+        onModifica.run();
+    }
+
+    // --- Azzeramento ---
+
+    /**
+     * Elimina quote, entrate e spese (e, se richiesto, gli alunni), ad esempio a inizio anno.
+     * Come le eliminazioni singole si propaga al foglio alla sincronizzazione successiva; i
+     * giustificativi già su Drive restano dove sono.
+     */
+    public void azzeraTutto(boolean mantieniAlunni) {
+        long adesso = orologio.getAsLong();
+        List<String> allegati = db.spese().allegatiLocali();
+        db.runInTransaction(() -> {
+            db.entrate().eliminaTutti(adesso);
+            db.spese().eliminaTutti(adesso);
+            db.quote().eliminaTutti(adesso);
+            if (!mantieniAlunni) {
+                db.alunni().eliminaTutti(adesso);
+            }
+        });
+        for (String allegato : allegati) {
+            cancellaFile(allegato);
+        }
         onModifica.run();
     }
 

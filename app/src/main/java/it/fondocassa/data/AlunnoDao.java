@@ -52,6 +52,10 @@ public interface AlunnoDao {
     @Query("DELETE FROM alunni WHERE alunno_id = :id")
     void delete(String id);
 
+    /** Marca eliminato ogni record: la sincronizzazione toglierà le righe anche dal foglio. */
+    @Query("UPDATE alunni SET eliminato = 1, is_synced = 0, aggiornato = :adesso")
+    void eliminaTutti(long adesso);
+
     @Query("DELETE FROM alunni")
     void deleteAll();
 }

@@ -57,6 +57,14 @@ public interface SpesaDao {
     @Query("DELETE FROM spese WHERE id_spesa = :id")
     void delete(String id);
 
+    /** Marca eliminata ogni spesa: la sincronizzazione toglierà le righe anche dal foglio. */
+    @Query("UPDATE spese SET eliminato = 1, is_synced = 0, aggiornato = :adesso, "
+            + "giustificativo_locale = NULL, giustificativo_mime = NULL")
+    void eliminaTutti(long adesso);
+
+    @Query("SELECT giustificativo_locale FROM spese WHERE giustificativo_locale IS NOT NULL")
+    List<String> allegatiLocali();
+
     @Query("DELETE FROM spese")
     void deleteAll();
 }

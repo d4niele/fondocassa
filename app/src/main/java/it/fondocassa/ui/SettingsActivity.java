@@ -5,11 +5,17 @@ import android.content.Intent;
 import android.net.Uri;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.snackbar.Snackbar;
@@ -61,6 +67,7 @@ public class SettingsActivity extends BaseActivity {
         findViewById(R.id.ripristina).setOnClickListener(v -> chiediRipristino());
         findViewById(R.id.reinvia).setOnClickListener(v -> chiediReinvio());
         findViewById(R.id.esporta_backup).setOnClickListener(v -> esportaBackup());
+        findViewById(R.id.azzera).setOnClickListener(v -> chiediAzzeramento());
         findViewById(R.id.cambia_pin).setOnClickListener(v ->
                 startActivity(new Intent(this, LockActivity.class).putExtra(LockActivity.EXTRA_CAMBIO, true)));
 
@@ -201,6 +208,59 @@ public class SettingsActivity extends BaseActivity {
                 }
             } catch (IOException e) {
                 mostraFallimento(R.string.reinvia_errore_titolo, e);
+            }
+        });
+    }
+
+    /** Azzeramento di inizio anno: va confermato scrivendo la parola indicata. */
+    private void chiediAzzeramento() {
+        View vista = getLayoutInflater().inflate(R.layout.dialog_azzera, null);
+        MaterialCheckBox mantieniAlunni = vista.findViewById(R.id.mantieni_alunni);
+        EditText conferma = vista.findViewById(R.id.campo_conferma);
+        String parola = getString(R.string.azzera_parola);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.azzera)
+                .setView(vista)
+                .setPositiveButton(R.string.azzera_azione, (d, w) -> azzera(mantieniAlunni.isChecked()))
+                .setNegativeButton(R.string.azione_annulla, null)
+                .show();
+        Button azione = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        azione.setEnabled(false);
+        conferma.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                azione.setEnabled(parola.equalsIgnoreCase(s.toString().trim()));
+            }
+        });
+    }
+
+    private void azzera(boolean mantieniAlunni) {
+        FondocassaApp app = app();
+        attesa.setVisibility(View.VISIBLE);
+        app.io().execute(() -> {
+            app.repository().azzeraTutto(mantieniAlunni);
+            if (!app.settings().connessioneConfigurata()) {
+                mostraEsito(getString(R.string.azzera_ok_locale));
+                return;
+            }
+            try {
+                SyncManager.crea(app.db(), app.settings()).sincronizza();
+                mostraEsito(getString(R.string.azzera_ok));
+            } catch (IOException e) {
+                // I dati sul telefono sono già azzerati: il foglio si allinea alla prossima sincronizzazione.
+                runOnUiThread(() -> {
+                    attesa.setVisibility(View.GONE);
+                    mostraErrore(getString(R.string.azzera_foglio_in_attesa_titolo),
+                            getString(R.string.azzera_foglio_in_attesa, e.getMessage()));
+                });
             }
         });
     }

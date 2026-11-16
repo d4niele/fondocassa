@@ -188,6 +188,42 @@ public class DatabaseTest {
     }
 
     @Test
+    public void azzerareEliminaTuttoTranneGliAlunniSeRichiesto() throws Exception {
+        Alunno a = alunno("Anna");
+        entrata(a, 500);
+        quota("Quota di avvio", 500);
+        File allegato = File.createTempFile("scontrino", ".jpg");
+        Spesa s = new Spesa();
+        s.descrizione = "Gessi";
+        s.importo = 350;
+        s.giustificativoLocale = allegato.getAbsolutePath();
+        repo.salvaSpesa(s);
+        db.alunni().confermaSync(a.id, db.alunni().get(a.id).aggiornato, "2026-11-16T10:00:00Z");
+        int modifichePrima = modifiche;
+
+        repo.azzeraTutto(true);
+
+        assertEquals(0, db.entrate().totale());
+        assertEquals(0, db.spese().totale());
+        assertEquals(0, db.quote().totale());
+        assertFalse(allegato.exists());
+        // Le eliminazioni restano in attesa per arrivare al foglio; gli alunni non vengono toccati.
+        assertEquals(1, db.entrate().pendenti().size());
+        assertEquals(1, db.spese().pendenti().size());
+        assertEquals(1, db.quote().pendenti().size());
+        assertEquals(1, db.alunni().list().size());
+        assertTrue(db.alunni().get(a.id).synced);
+        assertEquals(0, db.alunni().listConSaldo().get(0).totaleVersato);
+        assertEquals(modifichePrima + 1, modifiche);
+
+        repo.azzeraTutto(false);
+
+        assertEquals(0, db.alunni().list().size());
+        assertTrue(db.alunni().get(a.id).eliminato);
+        assertFalse(db.alunni().get(a.id).synced);
+    }
+
+    @Test
     public void leCategorieUsateVengonoRiproposte() {
         for (String categoria : new String[]{"Gite", "Feste", "Gite", ""}) {
             Spesa s = new Spesa();

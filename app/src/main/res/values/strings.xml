@@ -127,6 +127,16 @@
     <string name="backup_ok">Backup salvato su Drive</string>
     <string name="backup_dettaglio">%1$s\n\nContiene il database e %2$d giustificativi. Lo trovi nella cartella Fondocassa_Backup.</string>
     <string name="backup_errore_titolo">Backup non riuscito</string>
+    <string name="azzera">Azzera tutti i dati</string>
+    <string name="azzera_messaggio">Quote, entrate e spese vengono eliminate dal telefono e, alla sincronizzazione, anche dal foglio Google. Non si può annullare: se ti servono i dati di quest\'anno, prima esporta un backup. Le ricevute già su Drive restano dove sono.</string>
+    <string name="azzera_mantieni_alunni">Mantieni l\'elenco degli alunni</string>
+    <string name="azzera_parola">AZZERA</string>
+    <string name="azzera_conferma_hint">Scrivi AZZERA per confermare</string>
+    <string name="azzera_azione">Azzera</string>
+    <string name="azzera_ok">Dati azzerati, anche sul foglio Google</string>
+    <string name="azzera_ok_locale">Dati azzerati</string>
+    <string name="azzera_foglio_in_attesa_titolo">Foglio non ancora aggiornato</string>
+    <string name="azzera_foglio_in_attesa">I dati sul telefono sono stati azzerati, ma non è stato possibile aggiornare il foglio Google: verrà allineato alla prossima sincronizzazione.\n\n%1$s</string>
     <string name="impostazioni_sicurezza">Sicurezza</string>
     <string name="cambia_pin">Cambia PIN</string>
     <string name="usa_biometria">Sblocca con impronta o volto</string>

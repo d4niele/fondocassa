@@ -53,6 +53,10 @@ public interface EntrataDao {
     @Query("DELETE FROM entrate WHERE id_transazione = :id")
     void delete(String id);
 
+    /** Marca eliminato ogni record: la sincronizzazione toglierà le righe anche dal foglio. */
+    @Query("UPDATE entrate SET eliminato = 1, is_synced = 0, aggiornato = :adesso")
+    void eliminaTutti(long adesso);
+
     @Query("DELETE FROM entrate")
     void deleteAll();
 }

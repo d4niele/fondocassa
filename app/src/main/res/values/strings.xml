@@ -56,7 +56,7 @@
 
     <string name="alunno_nuovo">Nuovo alunno</string>
     <string name="alunno_modifica">Modifica alunno</string>
-    <string name="alunno_nome">Nome e cognome</string>
+    <string name="alunno_nome">Cognome e nome</string>
     <string name="alunno_note">Note (es. nomi dei genitori)</string>
     <string name="importa_alunni">Importa elenco da CSV o JSON</string>
     <string name="importa_istruzioni">Incolla l\'elenco oppure scegli un file. Colonne: nome, cognome, note (es. i nomi dei genitori).</string>

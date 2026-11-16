@@ -162,7 +162,7 @@ public final class ImportAlunni {
             return 'c';
         }
         if (t.equals("nome") || t.equals("name") || t.equals("first name") || t.equals("firstname")
-                || t.equals("alunno") || t.equals("nominativo") || t.equals("nome e cognome")) {
+                || t.equals("alunno") || t.equals("nominativo") || t.equals("nome e cognome") || t.equals("cognome e nome")) {
             return 'n';
         }
         if (t.equals("note") || t.equals("nota") || t.equals("notes") || t.equals("genitori")) {

@@ -56,19 +56,36 @@ stati spesi 8 €: *Versato* 60 €, *Da versare* 40 €, *In cassa adesso* 52 �
 Conviene usare un account Gmail dedicato alla classe (es. `fondocassa.classe@gmail.com`), così il
 passaggio di consegne negli anni successivi è semplice.
 
-1. Crea un nuovo foglio Google (resterà **privato**).
-2. *Estensioni → Apps Script*: incolla il contenuto di [`apps-script/Code.gs`](apps-script/Code.gs) al posto del codice presente.
-3. Seleziona la funzione **`setup`** ed eseguila (la prima volta Google chiede l'autorizzazione). Crea i fogli e la cartella `Fondocassa_Giustificativi` su Drive.
-4. Apri il *Registro esecuzioni*: copia il **token segreto** che vi compare.
-5. *Esegui il deployment → Nuovo deployment → Applicazione web*: «Esegui come: **me**», «Chi ha accesso: **Chiunque**». Copia l'**URL della Web App** (termina con `/exec`).
+Si fa una volta sola, dal browser, in una decina di minuti.
 
-Quando aggiorni `Code.gs`, pubblica una *nuova versione* dello stesso deployment: l'URL non cambia.
+1. **Crea il foglio**: vai su <https://sheets.new> e dagli un nome (es. «Fondocassa 3B»). Resterà **privato**: non condividerlo con nessuno.
+2. **Incolla lo script**: *Estensioni → Apps Script*, cancella il codice presente e incolla il contenuto di [`apps-script/Code.gs`](apps-script/Code.gs). Salva.
+3. **Esegui `setup`**: scegli la funzione **`setup`** nel menu accanto a *Esegui* e premi *Esegui*.
+   - La prima volta Google chiede l'autorizzazione e mostra l'avviso «Google non ha verificato questa app»: è normale, lo script è tuo. *Avanzate → Vai a … (non sicuro) → Consenti*.
+   - Lo script chiede accesso al foglio e a Drive: gli servono per scrivere i dati e salvare i giustificativi.
+   - Vengono creati i fogli `Sync_*` e `Vista_Classe`, la cartella `Fondocassa_Giustificativi` su Drive e il token segreto.
+4. **Copia il token**: nel *Registro esecuzioni*, in basso, compare la riga `Token segreto da inserire nell'app: …`. È la password con cui l'app parla con lo script.
+5. **Pubblica la Web App**: *Esegui il deployment → Nuovo deployment*, tipo *Applicazione web* (dall'ingranaggio), con:
+   - «Esegui come: **Me**», così lo script scrive nel tuo foglio con i tuoi permessi;
+   - «Chi ha accesso: **Chiunque**», perché l'app non fa login Google.
+
+   Copia l'**URL dell'applicazione web**, quello che termina con `/exec`.
+
+«Chiunque» significa che l'URL è raggiungibile da tutti, ma senza token lo script rifiuta ogni
+richiesta: tratta il token come una password.
+
+| Situazione | Cosa fare |
+|---|---|
+| Hai perso il token | Riesegui `setup`: ristampa quello esistente senza cambiarlo. |
+| Il token è finito in mani sbagliate | Esegui `rigeneraToken`: quello vecchio smette subito di funzionare e va aggiornato nell'app. |
+| Aggiorni `Code.gs` | *Esegui il deployment → Gestisci deployment → matita → Versione: Nuova versione*. L'URL resta lo stesso; con un *Nuovo deployment* cambierebbe. |
+| *Prova connessione* dà errore HTTP o «risposta non valida» | Controlla che l'accesso sia «Chiunque» e di aver copiato l'URL che termina con `/exec`, non quello di test (`/dev`). |
 
 ### 2. App
 
 1. Scarica l'APK dall'ultima [release](https://github.com/d4niele/fondocassa/releases) e installalo (Android 8.0 o successivo).
 2. Al primo avvio scegli un PIN.
-3. *Impostazioni*: incolla URL della Web App e token, poi *Prova connessione*.
+3. *Impostazioni*: incolla URL della Web App e token, poi *Prova connessione*. Per portarli sul telefono, il modo più comodo è mandarteli in un messaggio a te stesso.
 4. Su un telefono nuovo: *Impostazioni → Ripristina dati da Google Sheets*.
 
 ## Il foglio Google

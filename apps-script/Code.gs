@@ -47,7 +47,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '2';
+var VERSIONE_FORMATO = '3';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -447,10 +447,15 @@ function foglio_(ss, tabella) {
   if (tabella.collegata) {
     var colonnaExtra = tabella.colonne.length + 1;
     foglio.getRange(1, colonnaExtra).setValue(tabella.collegata.titolo);
-    foglio.getRange(2, colonnaExtra).setFormula(tabella.collegata.formula);
+    scriviFormulaCollegata_(foglio, tabella);
   }
   formattaFoglio_(foglio, tabella);
   return foglio;
+}
+
+function scriviFormulaCollegata_(foglio, tabella) {
+  foglio.getRange(2, tabella.colonne.length + 1)
+    .setFormula(formula_(tabella.collegata.formula, separatore_(foglio)));
 }
 
 /** Formati, larghezze e intestazione di un foglio di servizio. Si può rieseguire senza danni. */
@@ -474,7 +479,7 @@ function formattaFoglio_(foglio, tabella) {
 /**
  * Porta i fogli creati da una versione precedente al formato attuale: una volta sola, perché
  * riformattare a ogni sincronizzazione la rallenterebbe. Le date salvate come testo vengono
- * riscritte come date vere.
+ * riscritte come date vere e le formule riscritte con il separatore giusto per la lingua del foglio.
  */
 function aggiornaFormato_(ss) {
   var proprieta = PropertiesService.getScriptProperties();
@@ -488,11 +493,15 @@ function aggiornaFormato_(ss) {
       return; // verrà creato già nel formato attuale
     }
     formattaFoglio_(foglio, tabella);
+    if (tabella.collegata) {
+      scriviFormulaCollegata_(foglio, tabella);
+    }
     var righe = leggiRighe_(ss, foglio, tabella);
     scriviRighe_(ss, foglio, tabella, righe, righe.length);
   });
   var vista = ss.getSheetByName(FOGLIO_VISTA);
   if (vista) {
+    scriviFormuleVista_(vista);
     formattaVista_(vista);
   }
   proprieta.setProperty(PROP_FORMATO, VERSIONE_FORMATO);
@@ -553,6 +562,18 @@ function creaVista_(ss) {
     ['Cassa virtuale (se tutti versano)'],
     ['Aggiornato al']
   ]);
+  scriviFormuleVista_(vista);
+
+  vista.getRange(r - 1, 1, 1, 4).setValues([['Alunno', 'Totale versato', 'Da versare', 'Stato']]);
+  vista.getRange(r - 1, 6, 1, 5)
+    .setValues([['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']]);
+  formattaVista_(vista);
+  return vista;
+}
+
+/** Scrive (o riscrive) le formule di Vista_Classe con il separatore adatto alla lingua del foglio. */
+function scriviFormuleVista_(vista) {
+  var r = VISTA_RIGA_TABELLE;
   var formule = [
     ['B2', '=SUM(Sync_Quote!C2:C)'],
     ['B3', '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)'],
@@ -581,15 +602,40 @@ function creaVista_(ss) {
     ['F' + r, '=IFERROR(QUERY(Sync_Spese!A2:F,'
       + '"select D, C, B, E, F where A is not null order by D desc",0),"")']
   ];
+  var separatore = separatore_(vista);
   formule.forEach(function (f) {
-    vista.getRange(f[0]).setFormula(f[1]);
+    vista.getRange(f[0]).setFormula(formula_(f[1], separatore));
   });
+}
 
-  vista.getRange(r - 1, 1, 1, 4).setValues([['Alunno', 'Totale versato', 'Da versare', 'Stato']]);
-  vista.getRange(r - 1, 6, 1, 5)
-    .setValues([['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']]);
-  formattaVista_(vista);
-  return vista;
+/**
+ * Separatore degli argomenti che il foglio si aspetta nelle formule. Nei fogli in italiano (e nelle
+ * altre lingue con la virgola decimale) è il punto e virgola: con la virgola le formule danno
+ * #ERROR!. Lo si scopre provando una formula in una cella libera, senza indovinare dalla lingua.
+ */
+function separatore_(foglio) {
+  var prova = foglio.getRange(1, 26);
+  try {
+    prova.setFormula('=SUM(1,2)');
+    SpreadsheetApp.flush();
+    return prova.getValue() === 3 ? ',' : ';';
+  } finally {
+    prova.clearContent();
+  }
+}
+
+/** Sostituisce le virgole tra gli argomenti, lasciando intatte quelle dentro le stringhe. */
+function formula_(testo, separatore) {
+  if (separatore === ',') {
+    return testo;
+  }
+  var dentroStringa = false;
+  return testo.split('').map(function (carattere) {
+    if (carattere === '"') {
+      dentroStringa = !dentroStringa;
+    }
+    return carattere === ',' && !dentroStringa ? separatore : carattere;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------------

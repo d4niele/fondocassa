@@ -41,10 +41,18 @@ class FakeRange {
     return this;
   }
 
+  /** Calcola solo la formula di prova del separatore: in italiano "1,2" è un numero decimale. */
+  getValue() {
+    const formula = this.sheet.formule[`${this.row},${this.col}`];
+    if (formula === '=SUM(1,2)') return this.sheet.ss.virgolaDecimale ? 1.2 : 3;
+    return this.sheet.cella(this.row, this.col);
+  }
+
   clearContent() {
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
         this.sheet.scrivi(this.row + r, this.col + c, '');
+        delete this.sheet.formule[`${this.row + r},${this.col + c}`];
       }
     }
     return this;
@@ -68,8 +76,9 @@ class FakeRange {
 }
 
 class FakeSheet {
-  constructor(nome) {
+  constructor(nome, ss) {
     this.nome = nome;
+    this.ss = ss;
     this.celle = new Map();
     this.formule = {};
     this.formati = {};
@@ -140,6 +149,7 @@ class FakeSheet {
 class FakeSpreadsheet {
   constructor() {
     this.fogli = [];
+    this.virgolaDecimale = false; // true = foglio in italiano: gli argomenti si separano con ";"
   }
 
   getSheetByName(nome) {
@@ -147,7 +157,7 @@ class FakeSpreadsheet {
   }
 
   insertSheet(nome, indice) {
-    const foglio = new FakeSheet(nome);
+    const foglio = new FakeSheet(nome, this);
     if (indice === undefined) this.fogli.push(foglio);
     else this.fogli.splice(indice, 0, foglio);
     return foglio;
@@ -213,6 +223,7 @@ function carica() {
     Math,
     Date,
     SpreadsheetApp: {
+      flush: () => {},
       getActiveSpreadsheet: () => ss,
       openById: () => ss,
     },

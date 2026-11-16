@@ -203,6 +203,42 @@ test('una data non valida resta testo invece di far fallire la sync', () => {
   assert.equal(righe[1][2], '');
 });
 
+test('in un foglio in italiano le formule usano il punto e virgola', () => {
+  const env = ambiente();
+  env.ss.virgolaDecimale = true;
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna], entrate: [entrata] });
+
+  const entrate = env.ss.getSheetByName('Sync_Entrate');
+  assert.equal(entrate.formule['2,8'],
+    '=ARRAYFORMULA(IF(B2:B="";"";IFERROR(VLOOKUP(B2:B;Sync_Alunni!A:B;2;FALSE);"?")))');
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  assert.equal(vista.formule['3,2'], '=COUNTIFS(Sync_Alunni!A2:A;"<>";Sync_Alunni!C2:C;TRUE)');
+  assert.match(vista.formule['13,4'], /"In sospeso";"In regola"/);
+  // Le virgole dentro le stringhe (il linguaggio di QUERY) non vanno toccate.
+  assert.match(vista.formule['13,6'], /"select D, C, B, E, F where A is not null order by D desc";0\);""\)$/);
+  const tutte = Object.values(vista.formule).concat(Object.values(entrate.formule));
+  assert.ok(tutte.every((f) => !/,/.test(f.replace(/"[^"]*"/g, ''))), 'nessuna virgola tra gli argomenti');
+  // La cella usata per la prova del separatore viene ripulita.
+  assert.equal(vista.formule['1,26'], undefined);
+  assert.equal(entrate.formule['1,26'], undefined);
+});
+
+test('le formule con #ERROR! di una versione precedente vengono riscritte', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna], entrate: [entrata] });
+  // Foglio in italiano creato dalla versione precedente: formule con la virgola.
+  env.ss.virgolaDecimale = true;
+  env.proprieta.delete('FORMATO_FOGLI');
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  vista.scrivi(1, 4, 'nota del rappresentante');
+
+  env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
+
+  assert.match(env.ss.getSheetByName('Sync_Entrate').formule['2,8'], /^=ARRAYFORMULA\(IF\(B2:B="";"";/);
+  assert.match(vista.formule['13,1'], /^=ARRAYFORMULA\(IF\(Sync_Alunni!A2:A="";"";/);
+  assert.equal(vista.cella(1, 4), 'nota del rappresentante');
+});
+
 test('ogni sync aggiorna la data in Vista_Classe senza ricrearla', () => {
   const env = ambiente();
   env.post({ token: TOKEN, action: 'sync', alunni: [anna] });

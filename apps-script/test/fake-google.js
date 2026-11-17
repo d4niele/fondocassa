@@ -58,8 +58,52 @@ class FakeRange {
     return this;
   }
 
-  setFontWeight() {
+  /** Svuota valori, formule e formati, come Range.clear(). */
+  clear() {
+    this.clearContent();
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        const k = `${this.row + r},${this.col + c}`;
+        delete this.sheet.formatiCella[k];
+        delete this.sheet.sfondi[k];
+        delete this.sheet.stili[k];
+      }
+    }
     return this;
+  }
+
+  stile(nome, valore) {
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        const k = `${this.row + r},${this.col + c}`;
+        this.sheet.stili[k] = { ...this.sheet.stili[k], [nome]: valore };
+      }
+    }
+    return this;
+  }
+
+  setFontWeight(v) {
+    return this.stile('peso', v);
+  }
+
+  setFontSize(v) {
+    return this.stile('corpo', v);
+  }
+
+  setFontColor(v) {
+    return this.stile('colore', v);
+  }
+
+  setHorizontalAlignment(v) {
+    return this.stile('allineamento', v);
+  }
+
+  setWrap(v) {
+    return this.stile('aCapo', v);
+  }
+
+  setWrapStrategy(v) {
+    return this.stile('aCapo', v);
   }
 
   setDataValidation(regola) {
@@ -104,7 +148,9 @@ class FakeSheet {
     this.convalide = {};
     this.sfondi = {};
     this.larghezze = {};
+    this.stili = {};
     this.righeBloccate = 0;
+    this.grigliaNascosta = false;
   }
 
   cella(r, c) {
@@ -151,6 +197,11 @@ class FakeSheet {
 
   setFrozenRows(n) {
     this.righeBloccate = n;
+  }
+
+  setHiddenGridlines(v) {
+    this.grigliaNascosta = v;
+    return this;
   }
 
   setColumnWidth(colonna, larghezza) {
@@ -242,6 +293,7 @@ function carica() {
     Math,
     Date,
     SpreadsheetApp: {
+      WrapStrategy: { CLIP: 'CLIP', WRAP: 'WRAP' },
       flush: () => {},
       newDataValidation: () => ({
         requireCheckbox() {
@@ -283,6 +335,11 @@ function carica() {
         // Sufficiente per i test: data (e ora) locale a Roma.
         const giorno = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(data);
         if (formato === 'yyyy-MM-dd') return giorno;
+        if (formato === 'dd/MM/yyyy HH:mm') {
+          const [a, m, g] = giorno.split('-');
+          const hm = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', timeStyle: 'short' }).format(data);
+          return `${g}/${m}/${a} ${hm}`;
+        }
         const ora = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', timeStyle: 'medium' }).format(data);
         return giorno.replace(/-/g, '') + '-' + ora.replace(/:/g, '');
       },

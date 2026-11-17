@@ -120,6 +120,7 @@ Vista_Spese   solo formule: registro delle uscite
 - Le due viste contengono solo formule, si aggiornano da sole a ogni sincronizzazione e sono pensate per essere lette **dal telefono**: colonne strette che stanno in uno schermo in verticale, nessuna riga bloccata, niente griglia.
   - `Vista_Classe`: in cima *In cassa adesso* e *Cassa virtuale*, poi fondo iniziale, versato, spese, da versare, quota a testa, previsto e quanti alunni sono in regola; sotto, una riga per alunno con *Versato* e *Manca* (in rosso, o ✓ se è in regola).
   - `Vista_Spese`: data, descrizione, importo e link alla ricevuta, dalla spesa più recente.
+- Ogni foglio ha solo le colonne che usa: quelle vuote a destra vengono eliminate (una colonna con qualcosa scritto a mano resta).
 - Le colonne A:J di `Vista_Classe` sono gestite dallo script: eventuali appunti vanno scritti più a destra o in un altro foglio.
 
 ### Backup completo

@@ -151,6 +151,7 @@ class FakeSheet {
     this.stili = {};
     this.righeBloccate = 0;
     this.grigliaNascosta = false;
+    this.colonne = 26;
   }
 
   cella(r, c) {
@@ -182,6 +183,30 @@ class FakeSheet {
     return 1000;
   }
 
+  getMaxColumns() {
+    return this.colonne;
+  }
+
+  getParent() {
+    return this.ss;
+  }
+
+  /** Ultima colonna con un valore o una formula. */
+  getLastColumn() {
+    let ultima = 0;
+    for (const chiave of [...this.celle.keys(), ...Object.keys(this.formule)]) {
+      ultima = Math.max(ultima, Number(chiave.split(',')[1]));
+    }
+    return ultima;
+  }
+
+  deleteColumns(da, quante) {
+    if (da + quante - 1 > this.colonne) throw new Error('deleteColumns: colonne inesistenti');
+    if (this.getLastColumn() >= da) throw new Error('il finto foglio elimina solo colonne vuote in fondo');
+    this.colonne -= quante;
+    for (const k of Object.keys(this.larghezze)) if (Number(k) >= da) delete this.larghezze[k];
+  }
+
   getRange(a, col, numRows = 1, numCols = 1) {
     if (typeof a === 'string') {
       const m = /^([A-Z])(\d+)(?::([A-Z])(\d+))?$/.exec(a);
@@ -190,9 +215,17 @@ class FakeSheet {
       const r1 = Number(m[2]);
       const c2 = m[3] ? m[3].charCodeAt(0) - 64 : c1;
       const r2 = m[4] ? Number(m[4]) : r1;
-      return new FakeRange(this, r1, c1, r2 - r1 + 1, c2 - c1 + 1);
+      return this.controlla(new FakeRange(this, r1, c1, r2 - r1 + 1, c2 - c1 + 1));
     }
-    return new FakeRange(this, a, col, numRows, numCols);
+    return this.controlla(new FakeRange(this, a, col, numRows, numCols));
+  }
+
+  /** Come Sheets: fuori dalle colonne esistenti l'intervallo non è valido. */
+  controlla(range) {
+    if (range.col + range.numCols - 1 > this.colonne) {
+      throw new Error(`Le coordinate dell'intervallo non rientrano nelle dimensioni del foglio (${this.nome})`);
+    }
+    return range;
   }
 
   setFrozenRows(n) {

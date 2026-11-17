@@ -49,7 +49,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '6';
+var VERSIONE_FORMATO = '7';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -510,6 +510,9 @@ function formattaFoglio_(foglio, tabella) {
   if (tabella.collegata) {
     foglio.setColumnWidth(quante, LARGHEZZA_COLLEGATA);
   }
+  estetica_(function () {
+    togliColonneVuote_(foglio, quante);
+  });
 }
 
 /**
@@ -625,7 +628,7 @@ function creaVistaSpese_(ss) {
  */
 function componiVista_(ss, vista) {
   var r = VISTA_RIGA_ALUNNI;
-  vista.getRange(1, 1, vista.getMaxRows(), 10).clear();
+  vista.getRange(1, 1, vista.getMaxRows(), Math.min(10, vista.getMaxColumns())).clear();
   vista.setFrozenRows(0);
   VISTA_ETICHETTE.forEach(function (etichetta) {
     vista.getRange(etichetta[0], 1).setValue(etichetta[1]);
@@ -670,11 +673,12 @@ function componiVista_(ss, vista) {
       vista.setColumnWidth(i + 1, larghezza);
     });
     vista.setHiddenGridlines(true);
+    togliColonneVuote_(vista, VISTA_LARGHEZZE.length);
   });
 }
 
 function componiVistaSpese_(ss, vista) {
-  vista.getRange(1, 1, vista.getMaxRows(), 4).clear();
+  vista.getRange(1, 1, vista.getMaxRows(), Math.min(4, vista.getMaxColumns())).clear();
   vista.getRange(1, 1, 1, 4).setValues([['Data', 'Descrizione', 'Importo', 'Ricevuta']]);
   // L'indirizzo della ricevuta resta testo semplice: sul telefono si apre con un tocco e,
   // a differenza di un collegamento con HYPERLINK, arriva intatto anche con IMPORTRANGE.
@@ -692,15 +696,27 @@ function componiVistaSpese_(ss, vista) {
       vista.setColumnWidth(i + 1, larghezza);
     });
     vista.setHiddenGridlines(true);
+    togliColonneVuote_(vista, VISTA_SPESE_LARGHEZZE.length);
   });
 }
 
 function scriviFormule_(ss, vista, formule) {
-  // Il separatore si prova su un foglio di servizio, per non toccare celle della vista.
-  var separatore = separatore_(foglio_(ss, TABELLE.alunni));
+  var separatore = separatore_(vista);
   formule.forEach(function (f) {
     vista.getRange(f[0]).setFormula(formula_(f[1], separatore));
   });
+}
+
+/**
+ * Elimina le colonne vuote a destra di quelle usate: sul telefono non resta griglia inutile in cui
+ * scorrere. Una colonna con qualcosa scritto a mano non viene mai eliminata.
+ */
+function togliColonneVuote_(foglio, usate) {
+  var ultima = Math.max(usate, foglio.getLastColumn());
+  var totali = foglio.getMaxColumns();
+  if (totali > ultima) {
+    foglio.deleteColumns(ultima + 1, totali - ultima);
+  }
 }
 
 /** Formattazione: se una chiamata non riesce, i dati e le formule sono comunque già scritti. */
@@ -718,7 +734,10 @@ function estetica_(azione) {
  * #ERROR!. Lo si scopre provando una formula in una cella libera, senza indovinare dalla lingua.
  */
 function separatore_(foglio) {
-  var prova = foglio.getRange(1, 26);
+  // La prova si fa nell'ultima riga della colonna "attivo" di Sync_Alunni: esiste sempre (le colonne
+  // inutilizzate vengono eliminate), non ha un formato testo e non è mai coperta dai dati.
+  var alunni = foglio_(foglio.getParent(), TABELLE.alunni);
+  var prova = alunni.getRange(alunni.getMaxRows(), posizione_(TABELLE.alunni, 'attivo') + 1);
   try {
     prova.setFormula('=SUM(1,2)');
     SpreadsheetApp.flush();

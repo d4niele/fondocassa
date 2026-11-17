@@ -239,9 +239,8 @@ test('in un foglio in italiano le formule usano il punto e virgola', () => {
   const tutte = Object.values(vista.formule).concat(Object.values(entrate.formule), Object.values(spese.formule));
   assert.ok(tutte.every((f) => !/,/.test(f.replace(/"[^"]*"/g, ''))), 'nessuna virgola tra gli argomenti');
   // La cella usata per la prova del separatore viene ripulita.
-  assert.equal(vista.formule['1,26'], undefined);
-  assert.equal(entrate.formule['1,26'], undefined);
-  assert.equal(env.ss.getSheetByName('Sync_Alunni').formule['1,26'], undefined);
+  const alunni = env.ss.getSheetByName('Sync_Alunni');
+  assert.equal(alunni.formule[`${alunni.getMaxRows()},3`], undefined);
 });
 
 test('le formule con #ERROR! di una versione precedente vengono riscritte', () => {
@@ -533,6 +532,7 @@ test('una Vista_Classe della versione precedente viene ricomposta per il telefon
   // riga 13 con 12 righe bloccate, registro uscite in F:J.
   env.ss.fogli = env.ss.fogli.filter((f) => !['Sync_Fondi', 'Vista_Spese'].includes(f.getName()));
   const vista = env.ss.getSheetByName('Vista_Classe');
+  vista.colonne = 26;
   vista.getRange(1, 1, 1000, 10).clear();
   vista.scrivi(2, 1, 'Quota per alunno');
   vista.formule['2,2'] = '=SUM(Sync_Quote!C2:C)';
@@ -554,5 +554,34 @@ test('una Vista_Classe della versione precedente viene ricomposta per il telefon
   assert.equal(vista.cella(12, 6), '');
   assert.equal(vista.righeBloccate, 0);
   assert.equal(vista.cella(1, 12), 'nota del rappresentante');
+  assert.equal(vista.getMaxColumns(), 12, 'le colonne vuote dopo la nota vengono eliminate');
   assert.match(vista.cella(2, 1), /^Aggiornato al /);
+});
+
+test('ogni foglio ha solo le colonne che usa', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna], entrate: [entrata], spese: [spesa] });
+
+  const colonne = Object.fromEntries(env.ss.fogli.map((f) => [f.getName(), f.getMaxColumns()]));
+  assert.deepEqual(colonne, {
+    Vista_Classe: 3, Vista_Spese: 4, Sync_Alunni: 5, Sync_Quote: 5, Sync_Entrate: 8, Sync_Spese: 7, Sync_Fondi: 5,
+  });
+  // Le sincronizzazioni successive continuano a funzionare con le colonne ridotte.
+  const r = env.post({ token: TOKEN, action: 'sync', alunni: [marco], entrate: [{ ...entrata, importo_cent: 300 }] });
+  assert.equal(r.ok, true);
+  assert.equal(env.ss.getSheetByName('Sync_Alunni').formule['1000,3'], undefined, 'la cella di prova viene ripulita');
+});
+
+test('un foglio della versione precedente perde le colonne vuote una volta sola', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
+  const alunni = env.ss.getSheetByName('Sync_Alunni');
+  alunni.colonne = 26;
+  alunni.scrivi(1, 9, 'appunto a mano');
+  env.proprieta.set('FORMATO_FOGLI', '6');
+
+  env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
+
+  assert.equal(alunni.getMaxColumns(), 9, 'la colonna con l\'appunto resta');
+  assert.equal(alunni.cella(1, 9), 'appunto a mano');
 });

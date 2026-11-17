@@ -16,7 +16,13 @@
     <string name="azione_aggiungi">Aggiungi</string>
 
     <string name="cassa_reale">In cassa adesso</string>
-    <string name="cassa_reale_nota">Versato meno spese: i soldi che ci sono davvero</string>
+    <string name="cassa_reale_nota">Fondo iniziale + versato − spese: i soldi che ci sono davvero</string>
+    <string name="fondo_iniziale">Fondo iniziale</string>
+    <string name="fondo_iniziale_vuoto">Avanzo degli anni passati: tocca per impostarlo</string>
+    <string name="fondo_iniziale_spiegazione">I soldi già in cassa all\'inizio dell\'anno, ad esempio l\'avanzo degli anni passati. Si somma a quanto versato dagli alunni.</string>
+    <string name="fondo_importo">Importo (€)</string>
+    <string name="fondo_descrizione_esempio">Avanzo anni precedenti</string>
+    <string name="fondo_descrizione_riporto">Riporto dall\'anno precedente</string>
     <string name="cassa_virtuale">Cassa virtuale</string>
     <string name="cassa_virtuale_nota">Quanto avremmo se tutti avessero versato le quote</string>
     <string name="quote_titolo">Quote della classe</string>
@@ -128,7 +134,8 @@
     <string name="backup_dettaglio">%1$s\n\nContiene il database e %2$d giustificativi. Lo trovi nella cartella Fondocassa_Backup.</string>
     <string name="backup_errore_titolo">Backup non riuscito</string>
     <string name="azzera">Azzera tutti i dati</string>
-    <string name="azzera_messaggio">Quote, entrate e spese vengono eliminate dal telefono e, alla sincronizzazione, anche dal foglio Google. Non si può annullare: se ti servono i dati di quest\'anno, prima esporta un backup. Le ricevute già su Drive restano dove sono.</string>
+    <string name="azzera_messaggio">Quote, entrate, spese e fondo iniziale vengono eliminate dal telefono e, alla sincronizzazione, anche dal foglio Google. Non si può annullare: se ti servono i dati di quest\'anno, prima esporta un backup. Le ricevute già su Drive restano dove sono.</string>
+    <string name="azzera_riporta_cassa">Riporta quanto c\'è in cassa (%1$s) come fondo iniziale</string>
     <string name="azzera_mantieni_alunni">Mantieni l\'elenco degli alunni</string>
     <string name="azzera_parola">AZZERA</string>
     <string name="azzera_conferma_hint">Scrivi AZZERA per confermare</string>

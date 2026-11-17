@@ -20,7 +20,7 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 
 | Scheda | A cosa serve |
 |---|---|
-| **Riepilogo** | *In cassa adesso* (versato − spese), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
+| **Riepilogo** | *In cassa adesso* (fondo iniziale + versato − spese), *Fondo iniziale* (l'avanzo degli anni passati: un tocco per impostarlo), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
 | **Alunni** | L'elenco della classe con versato, residuo e stato (*In regola* / *In sospeso*). **Un tocco su un alunno apre l'incasso rapido**: importo già compilato col residuo, metodo (Contante, Satispay, Bancomat Pay, Hype, Postepay, PayPal, Bonifico), data di oggi → *Registra quota*. |
 | **Quote** | Le quote uguali per tutti, ad esempio «Quota di avvio — 5 €». Il dovuto di ogni alunno è la somma delle quote. |
 | **Entrate** | Registro di tutti i versamenti, per correggerli o eliminarli. |
@@ -46,8 +46,19 @@ Marco;Verdi;
 Gli alunni vengono salvati come «Cognome Nome», in ordine alfabetico come nel registro. Le note
 restano nell'app e nel foglio privato: non compaiono in `Vista_Classe`.
 
-Esempio: 20 alunni e una quota di avvio di 5 € → *Previsto* 100 €. Se hanno versato in 12 e sono
-stati spesi 8 €: *Versato* 60 €, *Da versare* 40 €, *In cassa adesso* 52 €, *Cassa virtuale* 92 €.
+### Fondo iniziale e nuovo anno
+
+Se la classe parte con dei soldi avanzati dagli anni passati, tocca *Fondo iniziale* nel
+*Riepilogo* e inserisci importo, descrizione (es. «Avanzo a.s. 2025/26») e data. Il fondo si somma
+alla cassa ma non al *Versato*: quote e situazione dei singoli alunni non cambiano.
+
+A fine anno, *Impostazioni → Azzera tutti i dati* elimina quote, entrate e spese e, con l'opzione
+*Riporta quanto c'è in cassa come fondo iniziale* (attiva di default), il saldo diventa il fondo
+iniziale dell'anno nuovo. Prima conviene esportare un backup.
+
+Esempio: 20 alunni, una quota di avvio di 5 € e 30 € avanzati dall'anno scorso → *Previsto* 100 €.
+Se hanno versato in 12 e sono stati spesi 8 €: *Versato* 60 €, *Da versare* 40 €,
+*In cassa adesso* 82 € (30 + 60 − 8), *Cassa virtuale* 122 €.
 
 ## Installazione
 
@@ -99,12 +110,13 @@ Sync_Alunni   alunno_id ◄───────────┐   nome, attivo, 
 Sync_Quote    id_quota              │   descrizione, importo (per alunno), data
 Sync_Entrate  id_transazione, alunno_id ─┘  data, importo, metodo, note  (+ colonna «alunno» via CERCA.VERT)
 Sync_Spese    id_spesa                  descrizione, categoria, data, importo, url_giustificativo ──► Drive
+Sync_Fondi    id_fondo                  descrizione, importo, data  (fondo iniziale)
 Vista_Classe  solo formule sui fogli sopra
 ```
 
 - I fogli `Sync_*` sono le tabelle grezze, 1:1 con SQLite: **non vanno modificati a mano** (ogni riga ha anche `timestamp_sync`).
 - Date (`gg/mm/aaaa`), importi in euro e data dell'ultima sincronizzazione sono formattati per la lettura, e le colonne hanno larghezze adatte al contenuto. I fogli creati da una versione precedente vengono riformattati da soli alla prima sincronizzazione dopo l'aggiornamento di `Code.gs`; da lì in poi le larghezze che cambi a mano restano.
-- `Vista_Classe` contiene solo formule: bilancio (quota per alunno, previsto, versato, da versare, spese, cassa reale e virtuale), stato di ogni alunno e registro delle uscite con il link al giustificativo. Si aggiorna da sola a ogni sincronizzazione.
+- `Vista_Classe` contiene solo formule: bilancio (fondo iniziale, quota per alunno, previsto, versato, da versare, spese, cassa reale e virtuale), stato di ogni alunno e registro delle uscite con il link al giustificativo. Si aggiorna da sola a ogni sincronizzazione.
 
 ### Backup completo
 
@@ -129,7 +141,7 @@ Crea invece un **secondo foglio** e, nella cella `A1`, importa solo la vista:
 ```
 
 Condividi quel secondo foglio come *Visualizzatore*. Se preferisci non mostrare gli importi dei
-singoli, importa solo le colonne che vuoi (es. `Vista_Classe!A1:B10` per il solo bilancio).
+singoli, importa solo le colonne che vuoi (es. `Vista_Classe!A1:B11` per il solo bilancio).
 
 ### Sicurezza
 
@@ -164,8 +176,8 @@ usano finti servizi Google: verificano la logica e le formule scritte, non il lo
 | Richiesta | Risposta |
 |---|---|
 | `GET ?action=ping&token=…` | `{ok}` |
-| `GET ?action=export_all&token=…` | `{ok, alunni[], quote[], entrate[], spese[]}` |
-| `POST {token, action:"sync", alunni[], quote[], entrate[], spese[]}` | `{ok, timestamp_sync, alunni[id], quote[id], entrate[id], spese[id]}` |
+| `GET ?action=export_all&token=…` | `{ok, alunni[], quote[], entrate[], spese[], fondi[]}` |
+| `POST {token, action:"sync", alunni[], quote[], entrate[], spese[], fondi[]}` | `{ok, timestamp_sync, alunni[id], quote[id], entrate[id], spese[id], fondi[id]}` |
 | `POST {token, action:"upload_giustificativo", id_spesa, filename, mime_type, data_base64}` | `{ok, url}` |
 | `POST {token, action:"backup", db_base64}` | `{ok, url, nome, giustificativi}` |
 

@@ -31,6 +31,8 @@ import it.fondocassa.sync.ApiClient;
 import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.SyncManager;
 import it.fondocassa.sync.SyncWorker;
+import it.fondocassa.util.Date;
+import it.fondocassa.util.Money;
 
 /** Collegamento allo script, ripristino da Google Sheets e sicurezza. */
 public class SettingsActivity extends BaseActivity {
@@ -216,12 +218,19 @@ public class SettingsActivity extends BaseActivity {
     private void chiediAzzeramento() {
         View vista = getLayoutInflater().inflate(R.layout.dialog_azzera, null);
         MaterialCheckBox mantieniAlunni = vista.findViewById(R.id.mantieni_alunni);
+        MaterialCheckBox riportaCassa = vista.findViewById(R.id.riporta_cassa);
+        riportaCassa.setText(getString(R.string.azzera_riporta_cassa, "…"));
+        FondocassaApp app = app();
+        app.io().execute(() -> {
+            String cassa = Money.format(app.repository().cassaReale());
+            runOnUiThread(() -> riportaCassa.setText(getString(R.string.azzera_riporta_cassa, cassa)));
+        });
         EditText conferma = vista.findViewById(R.id.campo_conferma);
         String parola = getString(R.string.azzera_parola);
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.azzera)
                 .setView(vista)
-                .setPositiveButton(R.string.azzera_azione, (d, w) -> azzera(mantieniAlunni.isChecked()))
+                .setPositiveButton(R.string.azzera_azione, (d, w) -> azzera(mantieniAlunni.isChecked(), riportaCassa.isChecked()))
                 .setNegativeButton(R.string.azione_annulla, null)
                 .show();
         Button azione = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
@@ -242,11 +251,12 @@ public class SettingsActivity extends BaseActivity {
         });
     }
 
-    private void azzera(boolean mantieniAlunni) {
+    private void azzera(boolean mantieniAlunni, boolean riportaCassa) {
         FondocassaApp app = app();
         attesa.setVisibility(View.VISIBLE);
         app.io().execute(() -> {
-            app.repository().azzeraTutto(mantieniAlunni);
+            app.repository().azzeraTutto(mantieniAlunni,
+                    riportaCassa ? getString(R.string.fondo_descrizione_riporto) : null, Date.oggi());
             if (!app.settings().connessioneConfigurata()) {
                 mostraEsito(getString(R.string.azzera_ok_locale));
                 return;

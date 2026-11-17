@@ -7,6 +7,7 @@ import java.util.List;
 
 import it.fondocassa.data.Alunno;
 import it.fondocassa.data.Entrata;
+import it.fondocassa.data.Fondo;
 import it.fondocassa.data.Quota;
 import it.fondocassa.data.Spesa;
 
@@ -147,6 +148,36 @@ public final class ApiModels {
         }
     }
 
+    public static class FondoDto {
+        @SerializedName("id_fondo") public String id;
+        public String descrizione;
+        @SerializedName("importo_cent") public long importoCent;
+        public String data;
+        public boolean eliminato;
+        @SerializedName("timestamp_sync") public String timestampSync;
+
+        public static FondoDto da(Fondo f) {
+            FondoDto d = new FondoDto();
+            d.id = f.id;
+            d.descrizione = f.descrizione;
+            d.importoCent = f.importo;
+            d.data = f.data;
+            d.eliminato = f.eliminato;
+            return d;
+        }
+
+        public Fondo inEntita() {
+            Fondo f = new Fondo();
+            f.id = id;
+            f.descrizione = descrizione == null ? "" : descrizione;
+            f.importo = importoCent;
+            f.data = data == null ? "" : data;
+            f.synced = true;
+            f.timestampSync = timestampSync;
+            return f;
+        }
+    }
+
     public static class SyncRequest {
         public String token;
         public final String action = "sync";
@@ -154,6 +185,7 @@ public final class ApiModels {
         public List<QuotaDto> quote = new ArrayList<>();
         public List<EntrataDto> entrate = new ArrayList<>();
         public List<SpesaDto> spese = new ArrayList<>();
+        public List<FondoDto> fondi = new ArrayList<>();
     }
 
     public static class BackupRequest {
@@ -176,6 +208,7 @@ public final class ApiModels {
         public List<String> quote = new ArrayList<>();
         public List<String> entrate = new ArrayList<>();
         public List<String> spese = new ArrayList<>();
+        public List<String> fondi = new ArrayList<>();
     }
 
     public static class UploadRequest {
@@ -192,5 +225,7 @@ public final class ApiModels {
         public List<QuotaDto> quote = new ArrayList<>();
         public List<EntrataDto> entrate = new ArrayList<>();
         public List<SpesaDto> spese = new ArrayList<>();
+        /** Null se lo script è di una versione precedente, che non conosce il fondo iniziale. */
+        public List<FondoDto> fondi;
     }
 }

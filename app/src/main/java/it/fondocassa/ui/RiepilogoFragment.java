@@ -22,6 +22,8 @@ import java.util.List;
 import it.fondocassa.FondocassaApp;
 import it.fondocassa.R;
 import it.fondocassa.data.AlunnoConSaldo;
+import it.fondocassa.data.Fondo;
+import it.fondocassa.util.Date;
 import it.fondocassa.util.Bilancio;
 import it.fondocassa.util.Money;
 
@@ -33,7 +35,8 @@ public class RiepilogoFragment extends Fragment {
     private long entrate;
     private long uscite;
     private long dovutoPerAlunno;
-    private final int[] pendenti = new int[4];
+    private Fondo fondo;
+    private final int[] pendenti = new int[5];
     private List<AlunnoConSaldo> alunni = new ArrayList<>();
 
     private FondocassaApp app() {
@@ -66,6 +69,12 @@ public class RiepilogoFragment extends Fragment {
             alunni = v;
             aggiorna();
         });
+        app.db().fondi().observe(Fondo.ID_INIZIALE).observe(getViewLifecycleOwner(), v -> {
+            fondo = v;
+            aggiorna();
+        });
+        app.db().fondi().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(4, v));
+        view.findViewById(R.id.card_fondo_iniziale).setOnClickListener(v -> FondoDialog.mostra(this, fondo));
         app.db().alunni().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(0, v));
         app.db().quote().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(1, v));
         app.db().entrate().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(2, v));
@@ -91,7 +100,10 @@ public class RiepilogoFragment extends Fragment {
         if (v == null) {
             return;
         }
-        Bilancio b = Bilancio.calcola(alunni, dovutoPerAlunno, entrate, uscite);
+        long fondoIniziale = fondo == null ? 0 : fondo.importo;
+        Bilancio b = Bilancio.calcola(alunni, dovutoPerAlunno, entrate, uscite, fondoIniziale);
+        testo(v, R.id.testo_fondo_iniziale, Money.format(fondoIniziale));
+        testo(v, R.id.testo_fondo_dettaglio, dettaglioFondo());
         testo(v, R.id.testo_cassa_reale, Money.format(b.cassaReale));
         testo(v, R.id.testo_cassa_virtuale, Money.format(b.cassaVirtuale));
         testo(v, R.id.testo_previsto, Money.format(b.previsto));
@@ -108,8 +120,23 @@ public class RiepilogoFragment extends Fragment {
         long incassatoSulPrevisto = b.previsto - b.daVersare;
         avanzamento.setProgress(b.previsto > 0 ? (int) (incassatoSulPrevisto * 100 / b.previsto) : 0);
 
-        int daSincronizzare = pendenti[0] + pendenti[1] + pendenti[2] + pendenti[3];
+        int daSincronizzare = 0;
+        for (int p : pendenti) {
+            daSincronizzare += p;
+        }
         testo(v, R.id.testo_sync, getString(R.string.stato_sync, daSincronizzare, ultimaSync()));
+    }
+
+    /** "Avanzo a.s. 2025/26 · 01/09/2026", oppure l'invito a impostarlo. */
+    private String dettaglioFondo() {
+        if (fondo == null || (fondo.importo == 0 && fondo.descrizione.isEmpty())) {
+            return getString(R.string.fondo_iniziale_vuoto);
+        }
+        String data = fondo.data.isEmpty() ? "" : Date.mostra(fondo.data);
+        if (fondo.descrizione.isEmpty()) {
+            return data;
+        }
+        return data.isEmpty() ? fondo.descrizione : fondo.descrizione + " · " + data;
     }
 
     private static void testo(View radice, int id, String valore) {

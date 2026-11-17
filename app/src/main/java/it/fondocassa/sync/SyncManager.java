@@ -13,6 +13,7 @@ import java.util.Set;
 import it.fondocassa.data.Alunno;
 import it.fondocassa.data.AppDatabase;
 import it.fondocassa.data.Entrata;
+import it.fondocassa.data.Fondo;
 import it.fondocassa.data.Quota;
 import it.fondocassa.data.Repository;
 import it.fondocassa.data.Settings;
@@ -21,6 +22,7 @@ import it.fondocassa.sync.ApiModels.AlunnoDto;
 import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.ApiModels.EntrataDto;
 import it.fondocassa.sync.ApiModels.ExportResponse;
+import it.fondocassa.sync.ApiModels.FondoDto;
 import it.fondocassa.sync.ApiModels.QuotaDto;
 import it.fondocassa.sync.ApiModels.SpesaDto;
 import it.fondocassa.sync.ApiModels.SyncRequest;
@@ -80,10 +82,12 @@ public class SyncManager {
             List<Quota> quote = db.quote().pendenti();
             List<Entrata> entrate = db.entrate().pendenti();
             List<Spesa> spese = db.spese().pendenti();
+            List<Fondo> fondi = db.fondi().pendenti();
             // Una spesa il cui allegato non è stato caricato resta in attesa: verrà riproposta
             // con il suo file alla prossima sincronizzazione, senza bloccare tutto il resto.
             spese.removeIf(s -> upload.falliti.contains(s.id));
-            if (alunni.isEmpty() && quote.isEmpty() && entrate.isEmpty() && spese.isEmpty()) {
+            if (alunni.isEmpty() && quote.isEmpty() && entrate.isEmpty() && spese.isEmpty()
+                    && fondi.isEmpty()) {
                 return new Esito(0, upload);
             }
 
@@ -92,6 +96,7 @@ public class SyncManager {
             Map<String, Long> versioniQuote = new HashMap<>();
             Map<String, Long> versioniEntrate = new HashMap<>();
             Map<String, Long> versioniSpese = new HashMap<>();
+            Map<String, Long> versioniFondi = new HashMap<>();
             for (Alunno a : alunni) {
                 richiesta.alunni.add(AlunnoDto.da(a));
                 versioniAlunni.put(a.id, a.aggiornato);
@@ -107,6 +112,10 @@ public class SyncManager {
             for (Spesa s : spese) {
                 richiesta.spese.add(SpesaDto.da(s));
                 versioniSpese.put(s.id, s.aggiornato);
+            }
+            for (Fondo f : fondi) {
+                richiesta.fondi.add(FondoDto.da(f));
+                versioniFondi.put(f.id, f.aggiornato);
             }
 
             SyncResponse risposta = api.sync(richiesta);
@@ -142,10 +151,18 @@ public class SyncManager {
                         confermati[0]++;
                     }
                 }
+                for (String id : nonNull(risposta.fondi)) {
+                    Long versione = versioniFondi.get(id);
+                    if (versione != null) {
+                        db.fondi().confermaSync(id, versione, ts);
+                        confermati[0]++;
+                    }
+                }
                 db.alunni().rimuoviEliminatiSincronizzati();
                 db.quote().rimuoviEliminatiSincronizzati();
                 db.entrate().rimuoviEliminatiSincronizzati();
                 db.spese().rimuoviEliminatiSincronizzati();
+                db.fondi().rimuoviEliminatiSincronizzati();
             });
             settings.setUltimaSync(ts);
             return new Esito(confermati[0], upload);
@@ -198,6 +215,7 @@ public class SyncManager {
                 db.quote().marcaTuttiDaInviare();
                 db.entrate().marcaTuttiDaInviare();
                 db.spese().marcaTuttiDaInviare();
+                db.fondi().marcaTuttiDaInviare();
             });
             return sincronizza();
         }
@@ -236,6 +254,14 @@ public class SyncManager {
                     spese.add(d.inEntita());
                 }
             }
+            // Uno script precedente non conosce il fondo iniziale: in quel caso resta quello locale.
+            boolean conFondi = export.fondi != null;
+            List<Fondo> fondi = new ArrayList<>();
+            for (FondoDto d : nonNull(export.fondi)) {
+                if (d.id != null && !d.id.isEmpty()) {
+                    fondi.add(d.inEntita());
+                }
+            }
             db.runInTransaction(() -> {
                 db.alunni().deleteAll();
                 db.quote().deleteAll();
@@ -245,8 +271,12 @@ public class SyncManager {
                 db.quote().insertAll(quote);
                 db.entrate().insertAll(entrate);
                 db.spese().insertAll(spese);
+                if (conFondi) {
+                    db.fondi().deleteAll();
+                    db.fondi().insertAll(fondi);
+                }
             });
-            return alunni.size() + quote.size() + entrate.size() + spese.size();
+            return alunni.size() + quote.size() + entrate.size() + spese.size() + fondi.size();
         }
     }
 

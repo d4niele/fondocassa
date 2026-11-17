@@ -14,6 +14,12 @@
         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
     <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/riporta_cassa"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="true" />
+
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/mantieni_alunni"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

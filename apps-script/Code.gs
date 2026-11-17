@@ -10,12 +10,13 @@
  *   Sync_Quote    id_quota             │ quote uguali per tutti (dovuto = somma degli importi)
  *   Sync_Entrate  id_transazione, alunno_id ─┘ + colonna "alunno" ricavata con CERCA.VERT
  *   Sync_Spese    id_spesa, url_giustificativo ──► file su Google Drive
+ *   Sync_Fondi    id_fondo: fondo iniziale (avanzo degli anni passati)
  *   Vista_Classe  solo formule sugli altri fogli: bilancio, stato per alunno, registro uscite
  *
  * Azioni:
  *   GET  ?action=ping&token=…
  *   GET  ?action=export_all&token=…
- *   POST {token, action: "sync", alunni: [], quote: [], entrate: [], spese: []}
+ *   POST {token, action: "sync", alunni: [], quote: [], entrate: [], spese: [], fondi: []}
  *   POST {token, action: "upload_giustificativo", id_spesa, filename, mime_type, data_base64}
  *   POST {token, action: "backup", db_base64}  → ZIP su Drive con database e giustificativi
  *
@@ -47,7 +48,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '4';
+var VERSIONE_FORMATO = '5';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -98,9 +99,19 @@ var TABELLE = {
       { nome: 'url_giustificativo', tipo: 'testo', larghezza: 300 },
       { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
     ]
+  },
+  fondi: {
+    foglio: 'Sync_Fondi',
+    colonne: [
+      { nome: 'id_fondo', tipo: 'testo', larghezza: 120 },
+      { nome: 'descrizione', tipo: 'testo', larghezza: 280 },
+      { nome: 'importo', json: 'importo_cent', tipo: 'euro', larghezza: 110 },
+      { nome: 'data', tipo: 'data', larghezza: 100 },
+      { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
+    ]
   }
 };
-var ORDINE_TABELLE = ['alunni', 'quote', 'entrate', 'spese'];
+var ORDINE_TABELLE = ['alunni', 'quote', 'entrate', 'spese', 'fondi'];
 
 // ---------------------------------------------------------------------------
 // Punti di ingresso della Web App
@@ -525,6 +536,11 @@ function aggiornaFormato_(ss) {
   });
   var vista = ss.getSheetByName(FOGLIO_VISTA);
   if (vista) {
+    // Le formule della vista possono riferirsi a fogli nuovi (es. Sync_Fondi): vanno creati prima.
+    ORDINE_TABELLE.forEach(function (chiave) {
+      foglio_(ss, TABELLE[chiave]);
+    });
+    scriviEtichetteVista_(vista);
     scriviFormuleVista_(vista);
     formattaVista_(vista);
   }
@@ -535,7 +551,7 @@ function aggiornaFormato_(ss) {
 // Vista_Classe: solo formule, sempre allineata ai fogli di servizio
 // ---------------------------------------------------------------------------
 
-var VISTA_CELLA_AGGIORNAMENTO = 'B10';
+var VISTA_CELLA_AGGIORNAMENTO = 'B11';
 var VISTA_RIGA_TABELLE = 13;
 
 function aggiornaVista_(ss, timestamp) {
@@ -550,8 +566,8 @@ function formattaVista_(vista) {
   var r = VISTA_RIGA_TABELLE;
   var righe = vista.getMaxRows() - r + 1;
   vista.getRange('A1').setFontWeight('bold');
-  vista.getRange('B2:B9').setNumberFormat(FORMATI.euro);
-  vista.getRange('B3').setNumberFormat('0');
+  vista.getRange('B2:B10').setNumberFormat(FORMATI.euro);
+  vista.getRange('B4').setNumberFormat('0');
   vista.getRange(VISTA_CELLA_AGGIORNAMENTO).setNumberFormat(FORMATI.istante);
   vista.getRange(r - 1, 1, 1, 4).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
   vista.getRange(r - 1, 6, 1, 5).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
@@ -574,8 +590,21 @@ function creaVista_(ss) {
   var vista = ss.insertSheet(FOGLIO_VISTA, 0);
   var r = VISTA_RIGA_TABELLE;
 
+  scriviEtichetteVista_(vista);
+  scriviFormuleVista_(vista);
+
+  vista.getRange(r - 1, 1, 1, 4).setValues([['Alunno', 'Totale versato', 'Da versare', 'Stato']]);
+  vista.getRange(r - 1, 6, 1, 5)
+    .setValues([['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']]);
+  formattaVista_(vista);
+  return vista;
+}
+
+/** Titoli del bilancio (colonna A); le formule corrispondenti sono in colonna B. */
+function scriviEtichetteVista_(vista) {
   vista.getRange('A1').setValue('Fondocassa di classe');
-  vista.getRange('A2:A10').setValues([
+  vista.getRange('A2:A11').setValues([
+    ['Fondo iniziale (avanzo anni passati)'],
     ['Quota per alunno'],
     ['Alunni attivi'],
     ['Previsto (quote × alunni)'],
@@ -586,40 +615,34 @@ function creaVista_(ss) {
     ['Cassa virtuale (se tutti versano)'],
     ['Aggiornato al']
   ]);
-  scriviFormuleVista_(vista);
-
-  vista.getRange(r - 1, 1, 1, 4).setValues([['Alunno', 'Totale versato', 'Da versare', 'Stato']]);
-  vista.getRange(r - 1, 6, 1, 5)
-    .setValues([['Data', 'Categoria', 'Descrizione', 'Importo', 'Link giustificativo']]);
-  formattaVista_(vista);
-  return vista;
 }
 
 /** Scrive (o riscrive) le formule di Vista_Classe con il separatore adatto alla lingua del foglio. */
 function scriviFormuleVista_(vista) {
   var r = VISTA_RIGA_TABELLE;
   var formule = [
-    ['B2', '=SUM(Sync_Quote!C2:C)'],
-    ['B3', '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)'],
-    ['B4', '=B2*B3'],
-    ['B5', '=SUM(Sync_Entrate!D2:D)'],
+    ['B2', '=SUM(Sync_Fondi!C2:C)'],
+    ['B3', '=SUM(Sync_Quote!C2:C)'],
+    ['B4', '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)'],
+    ['B5', '=B3*B4'],
+    ['B6', '=SUM(Sync_Entrate!D2:D)'],
     // Somma dei residui dei soli alunni attivi: chi ha versato di più non copre gli altri.
-    ['B6', '=SUMPRODUCT((Sync_Alunni!A2:A<>"")*(Sync_Alunni!C2:C=TRUE)'
-      + '*(B2-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)>0)'
-      + '*(B2-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)))'],
-    ['B7', '=SUM(Sync_Spese!E2:E)'],
-    ['B8', '=B5-B7'],
-    ['B9', '=B8+B6'],
+    ['B7', '=SUMPRODUCT((Sync_Alunni!A2:A<>"")*(Sync_Alunni!C2:C=TRUE)'
+      + '*(B3-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)>0)'
+      + '*(B3-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)))'],
+    ['B8', '=SUM(Sync_Spese!E2:E)'],
+    ['B9', '=B2+B6-B8'],
+    ['B10', '=B9+B7'],
 
     // Tabella alunni (A:D): una riga per ogni riga di Sync_Alunni, collegata per alunno_id.
     ['A' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",Sync_Alunni!B2:B))'],
     ['B' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",'
       + 'SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)))'],
     ['C' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",IF(Sync_Alunni!C2:C=FALSE,0,'
-      + 'IF($B$2-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)>0,'
-      + '$B$2-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D),0))))'],
+      + 'IF($B$3-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)>0,'
+      + '$B$3-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D),0))))'],
     ['D' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",IF(Sync_Alunni!C2:C=FALSE,"Non attivo",'
-      + 'IF($B$2-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)>0,'
+      + 'IF($B$3-SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)>0,'
       + '"In sospeso","In regola"))))'],
 
     // Registro uscite (F:J), dalla più recente.

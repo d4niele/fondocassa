@@ -69,6 +69,17 @@ public class BilancioTest {
     }
 
     @Test
+    public void ilFondoInizialeEntraInCassaMaNonNelVersato() {
+        // 2 alunni, quota 5 €, ha versato solo uno; 37,50 € avanzati dagli anni passati, 3 € di spese.
+        Bilancio b = Bilancio.calcola(Arrays.asList(alunno(500, true), alunno(0, true)), 500, 500, 300, 3750);
+        assertEquals(3750, b.fondoIniziale);
+        assertEquals(500, b.versato);
+        assertEquals(500, b.daVersare);
+        assertEquals(3950, b.cassaReale);
+        assertEquals(4450, b.cassaVirtuale);
+    }
+
+    @Test
     public void classeVuota() {
         Bilancio b = Bilancio.calcola(new ArrayList<>(), 500, 0, 250);
         assertEquals(0, b.previsto);

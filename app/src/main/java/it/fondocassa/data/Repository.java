@@ -152,28 +152,62 @@ public class Repository {
         onModifica.run();
     }
 
+    // --- Fondo iniziale ---
+
+    /** Imposta il fondo iniziale (avanzo degli anni passati); 0 equivale a nessun fondo. */
+    public void salvaFondoIniziale(long importo, String descrizione, String data) {
+        Fondo fondo = new Fondo();
+        fondo.id = Fondo.ID_INIZIALE;
+        fondo.importo = importo;
+        fondo.descrizione = descrizione == null ? "" : descrizione;
+        fondo.data = data == null ? "" : data;
+        fondo.synced = false;
+        fondo.aggiornato = orologio.getAsLong();
+        db.fondi().upsert(fondo);
+        onModifica.run();
+    }
+
+    /** Quanto c'è davvero in cassa: fondo iniziale + versato − spese, in centesimi. */
+    public long cassaReale() {
+        return db.fondi().totale() + db.entrate().totale() - db.spese().totale();
+    }
+
     // --- Azzeramento ---
 
     /**
      * Elimina quote, entrate e spese (e, se richiesto, gli alunni), ad esempio a inizio anno.
      * Come le eliminazioni singole si propaga al foglio alla sincronizzazione successiva; i
      * giustificativi già su Drive restano dove sono.
+     *
+     * @param descrizioneRiporto se non null, quanto c'era in cassa diventa il fondo iniziale del
+     *                           nuovo anno, con questa descrizione; se null il fondo viene azzerato
+     * @return il fondo iniziale del nuovo anno, in centesimi
      */
-    public void azzeraTutto(boolean mantieniAlunni) {
+    public long azzeraTutto(boolean mantieniAlunni, String descrizioneRiporto, String data) {
         long adesso = orologio.getAsLong();
         List<String> allegati = db.spese().allegatiLocali();
+        long[] riporto = {0};
         db.runInTransaction(() -> {
+            riporto[0] = descrizioneRiporto == null ? 0 : cassaReale();
             db.entrate().eliminaTutti(adesso);
             db.spese().eliminaTutti(adesso);
             db.quote().eliminaTutti(adesso);
             if (!mantieniAlunni) {
                 db.alunni().eliminaTutti(adesso);
             }
+            Fondo fondo = new Fondo();
+            fondo.id = Fondo.ID_INIZIALE;
+            fondo.importo = riporto[0];
+            fondo.descrizione = descrizioneRiporto == null ? "" : descrizioneRiporto;
+            fondo.data = data == null ? "" : data;
+            fondo.aggiornato = adesso;
+            db.fondi().upsert(fondo);
         });
         for (String allegato : allegati) {
             cancellaFile(allegato);
         }
         onModifica.run();
+        return riporto[0];
     }
 
     public static void cancellaFile(String percorso) {

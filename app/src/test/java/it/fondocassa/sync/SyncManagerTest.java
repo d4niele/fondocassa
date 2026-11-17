@@ -27,6 +27,7 @@ import it.fondocassa.TestApp;
 import it.fondocassa.data.Alunno;
 import it.fondocassa.data.AppDatabase;
 import it.fondocassa.data.Entrata;
+import it.fondocassa.data.Fondo;
 import it.fondocassa.data.Quota;
 import it.fondocassa.data.Repository;
 import it.fondocassa.data.Settings;
@@ -279,6 +280,47 @@ public class SyncManagerTest {
         assertFalse(inviata.get("eliminato").getAsBoolean());
         assertTrue(db.alunni().get(a.id).synced);
         assertTrue(db.entrate().get(e.id).synced);
+    }
+
+    @Test
+    public void ilFondoInizialeVieneInviatoEConfermato() throws Exception {
+        repo.salvaFondoIniziale(3750, "Avanzo", "2026-09-01");
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"timestamp_sync\":\"" + TS + "\","
+                + "\"fondi\":[\"fondo_iniziale\"]}"));
+
+        assertEquals(1, sync.sincronizza().inviati);
+
+        JsonObject inviato = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        JsonObject fondo = inviato.getAsJsonArray("fondi").get(0).getAsJsonObject();
+        assertEquals("fondo_iniziale", fondo.get("id_fondo").getAsString());
+        assertEquals(3750, fondo.get("importo_cent").getAsLong());
+        assertTrue(db.fondi().get(Fondo.ID_INIZIALE).synced);
+    }
+
+    @Test
+    public void ilRipristinoDaUnoScriptPrecedenteNonCancellaIlFondoIniziale() throws Exception {
+        repo.salvaFondoIniziale(3750, "Avanzo", "2026-09-01");
+        // Lo script non ancora aggiornato non restituisce "fondi".
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"alunni\":[],\"quote\":[],"
+                + "\"entrate\":[],\"spese\":[]}"));
+
+        sync.ripristina();
+
+        assertEquals(3750, db.fondi().totale());
+    }
+
+    @Test
+    public void ilRipristinoRecuperaIlFondoIniziale() throws Exception {
+        repo.salvaFondoIniziale(100, "Vecchio", "2026-09-01");
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"alunni\":[],\"quote\":[],"
+                + "\"entrate\":[],\"spese\":[],\"fondi\":[{\"id_fondo\":\"fondo_iniziale\","
+                + "\"descrizione\":\"Avanzo\",\"importo_cent\":3750,\"data\":\"2026-09-01\"}]}"));
+
+        assertEquals(1, sync.ripristina());
+
+        Fondo fondo = db.fondi().get(Fondo.ID_INIZIALE);
+        assertEquals(3750, fondo.importo);
+        assertTrue(fondo.synced);
     }
 
     @Test

@@ -201,7 +201,7 @@ public class DatabaseTest {
         db.alunni().confermaSync(a.id, db.alunni().get(a.id).aggiornato, "2026-11-16T10:00:00Z");
         int modifichePrima = modifiche;
 
-        repo.azzeraTutto(true);
+        repo.azzeraTutto(true, null, null);
 
         assertEquals(0, db.entrate().totale());
         assertEquals(0, db.spese().totale());
@@ -216,11 +216,87 @@ public class DatabaseTest {
         assertEquals(0, db.alunni().listConSaldo().get(0).totaleVersato);
         assertEquals(modifichePrima + 1, modifiche);
 
-        repo.azzeraTutto(false);
+        repo.azzeraTutto(false, null, null);
 
         assertEquals(0, db.alunni().list().size());
         assertTrue(db.alunni().get(a.id).eliminato);
         assertFalse(db.alunni().get(a.id).synced);
+    }
+
+    @Test
+    public void ilFondoInizialeVieneSalvatoESommatoAllaCassa() {
+        repo.salvaFondoIniziale(3750, "Avanzo a.s. 2025/26", "2026-09-01");
+        Fondo fondo = db.fondi().get(Fondo.ID_INIZIALE);
+        assertEquals(3750, fondo.importo);
+        assertEquals("Avanzo a.s. 2025/26", fondo.descrizione);
+        assertFalse(fondo.synced);
+        assertEquals(1, modifiche);
+
+        Alunno a = alunno("Anna");
+        Entrata e = new Entrata();
+        e.alunnoId = a.id;
+        e.importo = 500;
+        repo.salvaEntrata(e);
+        Spesa s = new Spesa();
+        s.importo = 250;
+        repo.salvaSpesa(s);
+        assertEquals(3750 + 500 - 250, repo.cassaReale());
+
+        // Reimpostarlo sostituisce il valore, non ne aggiunge un altro.
+        repo.salvaFondoIniziale(1000, "Corretto", "2026-09-01");
+        assertEquals(1000, db.fondi().totale());
+    }
+
+    @Test
+    public void aInizioAnnoQuantoCeInCassaDiventaIlFondoIniziale() {
+        repo.salvaFondoIniziale(1000, "Avanzo", "2025-09-01");
+        Alunno a = alunno("Anna");
+        Entrata e = new Entrata();
+        e.alunnoId = a.id;
+        e.importo = 500;
+        repo.salvaEntrata(e);
+        Spesa s = new Spesa();
+        s.importo = 200;
+        repo.salvaSpesa(s);
+
+        long riporto = repo.azzeraTutto(true, "Riporto dall'anno precedente", "2026-09-01");
+
+        assertEquals(1300, riporto);
+        Fondo fondo = db.fondi().get(Fondo.ID_INIZIALE);
+        assertEquals(1300, fondo.importo);
+        assertEquals("Riporto dall'anno precedente", fondo.descrizione);
+        assertEquals("2026-09-01", fondo.data);
+        assertEquals(1300, repo.cassaReale());
+
+        assertEquals(0, repo.azzeraTutto(true, null, null));
+        assertEquals(0, db.fondi().totale());
+    }
+
+    @Test
+    public void ilDatabaseDellaVersionePrecedenteVieneAggiornatoSenzaPerdereDati() {
+        android.content.Context context = ApplicationProvider.getApplicationContext();
+        String nome = "migrazione-test.db";
+        context.deleteDatabase(nome);
+        AppDatabase v2 = androidx.room.Room.databaseBuilder(context, AppDatabase.class, nome)
+                .allowMainThreadQueries().build();
+        new Repository(v2, () -> { }).salvaAlunno(alunno("Anna"));
+        // Riporta il file allo schema 1: senza la tabella dei fondi.
+        androidx.sqlite.db.SupportSQLiteDatabase sql = v2.getOpenHelper().getWritableDatabase();
+        sql.execSQL("DROP TABLE fondi");
+        sql.setVersion(1);
+        v2.close();
+
+        AppDatabase aggiornato = androidx.room.Room.databaseBuilder(context, AppDatabase.class, nome)
+                .addMigrations(AppDatabase.MIGRAZIONE_1_2).allowMainThreadQueries().build();
+        try {
+            // Room verifica lo schema all'apertura: una migrazione sbagliata solleva un'eccezione.
+            assertEquals(1, aggiornato.alunni().list().size());
+            new Repository(aggiornato, () -> { }).salvaFondoIniziale(500, "x", "2026-09-01");
+            assertEquals(500, aggiornato.fondi().totale());
+        } finally {
+            aggiornato.close();
+            context.deleteDatabase(nome);
+        }
     }
 
     @Test

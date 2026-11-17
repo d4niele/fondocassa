@@ -114,11 +114,13 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
 
   const vista = env.ss.getSheetByName('Vista_Classe');
   assert.equal(env.ss.fogli[0], vista, 'la vista è il primo foglio');
-  assert.equal(vista.formule['2,2'], '=SUM(Sync_Quote!C2:C)');
-  assert.equal(vista.formule['5,2'], '=SUM(Sync_Entrate!D2:D)');
-  assert.equal(vista.formule['7,2'], '=SUM(Sync_Spese!E2:E)');
-  assert.equal(vista.formule['8,2'], '=B5-B7');
-  assert.equal(vista.formule['9,2'], '=B8+B6');
+  assert.equal(vista.formule['2,2'], '=SUM(Sync_Fondi!C2:C)');
+  assert.equal(vista.formule['3,2'], '=SUM(Sync_Quote!C2:C)');
+  assert.equal(vista.formule['6,2'], '=SUM(Sync_Entrate!D2:D)');
+  assert.equal(vista.formule['8,2'], '=SUM(Sync_Spese!E2:E)');
+  assert.equal(vista.formule['9,2'], '=B2+B6-B8', 'in cassa: fondo iniziale + versato - spese');
+  assert.equal(vista.formule['10,2'], '=B9+B7');
+  assert.match(vista.formule['13,3'], /\$B\$3-SUMIF/, 'il residuo usa la quota per alunno');
   assert.match(vista.formule['13,2'], /SUMIF\(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D\)/);
   assert.match(vista.formule['13,4'], /"In sospeso","In regola"/);
   assert.match(vista.formule['13,6'], /QUERY\(Sync_Spese!A2:F/);
@@ -145,8 +147,8 @@ test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto s
 
   const vista = env.ss.getSheetByName('Vista_Classe');
   assert.equal(vista.formatiCella['2,2'], '#,##0.00" €"');
-  assert.equal(vista.formatiCella['3,2'], '0', 'il numero di alunni non è un importo');
-  assert.equal(vista.formatiCella['10,2'], 'dd/mm/yyyy hh:mm');
+  assert.equal(vista.formatiCella['4,2'], '0', 'il numero di alunni non è un importo');
+  assert.equal(vista.formatiCella['11,2'], 'dd/mm/yyyy hh:mm');
   assert.equal(vista.formatiCella['13,6'], 'dd/mm/yyyy');
   assert.equal(Object.keys(vista.larghezze).length, 10);
 });
@@ -212,7 +214,7 @@ test('in un foglio in italiano le formule usano il punto e virgola', () => {
   assert.equal(entrate.formule['2,8'],
     '=ARRAYFORMULA(IF(B2:B="";"";IFERROR(VLOOKUP(B2:B;Sync_Alunni!A:B;2;FALSE);"?")))');
   const vista = env.ss.getSheetByName('Vista_Classe');
-  assert.equal(vista.formule['3,2'], '=COUNTIFS(Sync_Alunni!A2:A;"<>";Sync_Alunni!C2:C;TRUE)');
+  assert.equal(vista.formule['4,2'], '=COUNTIFS(Sync_Alunni!A2:A;"<>";Sync_Alunni!C2:C;TRUE)');
   assert.match(vista.formule['13,4'], /"In sospeso";"In regola"/);
   // Le virgole dentro le stringhe (il linguaggio di QUERY) non vanno toccate.
   assert.match(vista.formule['13,6'], /"select D, C, B, E, F where A is not null order by D desc";0\);""\)$/);
@@ -265,7 +267,7 @@ test('ogni sync aggiorna la data in Vista_Classe senza ricrearla', () => {
   const r = env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
 
   assert.equal(env.ss.getSheetByName('Vista_Classe'), vista);
-  assert.deepEqual(vista.cella(10, 2), new Date(r.timestamp_sync));
+  assert.deepEqual(vista.cella(11, 2), new Date(r.timestamp_sync));
   assert.equal(vista.cella(1, 4), 'nota del rappresentante');
 });
 
@@ -333,7 +335,7 @@ test('export_all restituisce esattamente ciò che è stato sincronizzato', () =>
 test('export_all su un foglio vuoto', () => {
   const env = ambiente();
   assert.deepEqual(env.get({ action: 'export_all', token: TOKEN }),
-    { alunni: [], quote: [], entrate: [], spese: [], ok: true });
+    { alunni: [], quote: [], entrate: [], spese: [], fondi: [], ok: true });
 });
 
 test('export_all normalizza date e importi modificati a mano nel foglio', () => {
@@ -431,12 +433,12 @@ test('setup crea fogli, cartella e un token che resta stabile', () => {
 
   assert.equal(token.length, 64);
   assert.deepEqual(env.ss.fogli.map((f) => f.nome),
-    ['Vista_Classe', 'Sync_Alunni', 'Sync_Quote', 'Sync_Entrate', 'Sync_Spese']);
+    ['Vista_Classe', 'Sync_Alunni', 'Sync_Quote', 'Sync_Entrate', 'Sync_Spese', 'Sync_Fondi']);
   assert.equal(env.drive.cartelle.length, 1);
   assert.equal(env.get({ action: 'ping', token }).ok, true);
 
   assert.equal(env.gs.setup(), token, 'rieseguire setup non cambia il token');
-  assert.equal(env.ss.fogli.length, 5);
+  assert.equal(env.ss.fogli.length, 6);
 
   const nuovo = env.gs.rigeneraToken();
   assert.notEqual(nuovo, token);
@@ -481,4 +483,42 @@ test('backup senza database o senza token viene rifiutato', () => {
   assert.match(env.post({ token: TOKEN, action: 'backup' }).error, /manca il database/);
   assert.equal(env.post({ token: 'sbagliato', action: 'backup', db_base64: 'AA==' }).ok, false);
   assert.equal(env.drive.file.length, 0);
+});
+
+test('il fondo iniziale va in Sync_Fondi, entra nella cassa reale e torna con export_all', () => {
+  const env = ambiente();
+  const fondo = { id_fondo: 'fondo_iniziale', descrizione: 'Avanzo a.s. 2025/26', importo_cent: 3750,
+    data: '2026-09-01' };
+  const r = env.post({ token: TOKEN, action: 'sync', fondi: [fondo] });
+  assert.deepEqual(r.fondi, ['fondo_iniziale']);
+
+  const foglio = env.ss.getSheetByName('Sync_Fondi');
+  assert.deepEqual(foglio.getRange(1, 1, 1, 5).getValues()[0],
+    ['id_fondo', 'descrizione', 'importo', 'data', 'timestamp_sync']);
+  assert.equal(foglio.cella(2, 3), 37.5);
+
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  assert.equal(vista.cella(2, 1), 'Fondo iniziale (avanzo anni passati)');
+  assert.equal(vista.cella(9, 1), 'In cassa (reale)');
+
+  const e = env.get({ action: 'export_all', token: TOKEN });
+  assert.deepEqual(e.fondi, [{ ...fondo, timestamp_sync: r.timestamp_sync }]);
+});
+
+test('una Vista_Classe della versione precedente prende le nuove righe del fondo iniziale', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
+  // Stato della versione precedente: niente Sync_Fondi e bilancio che parte dalla quota in B2.
+  env.ss.fogli = env.ss.fogli.filter((f) => f.getName() !== 'Sync_Fondi');
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  vista.scrivi(2, 1, 'Quota per alunno');
+  vista.formule['2,2'] = '=SUM(Sync_Quote!C2:C)';
+  env.proprieta.set('FORMATO_FOGLI', '4');
+
+  env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
+
+  assert.ok(env.ss.getSheetByName('Sync_Fondi'), 'il foglio dei fondi viene creato');
+  assert.equal(vista.cella(2, 1), 'Fondo iniziale (avanzo anni passati)');
+  assert.equal(vista.formule['2,2'], '=SUM(Sync_Fondi!C2:C)');
+  assert.equal(vista.formule['9,2'], '=B2+B6-B8');
 });

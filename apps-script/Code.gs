@@ -50,7 +50,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '12';
+var VERSIONE_FORMATO = '13';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -807,6 +807,7 @@ function componiVistaSpese_(ss, vista) {
   estetica_(function () {
     var righe = vista.getMaxRows() - 1;
     vista.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
+    vista.getRange(1, 1, righe + 1, 4).setHorizontalAlignment('center').setVerticalAlignment('middle');
     vista.setFrozenRows(1);
     vista.getRange(2, 1, righe, 1).setNumberFormat('dd/mm/yy');
     vista.getRange(2, 2, righe, 1).setWrap(true);

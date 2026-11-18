@@ -202,6 +202,10 @@ test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto s
   assert.ok(Object.values(vistaSpese.larghezze).reduce((a, b) => a + b, 0) <= 380);
   assert.equal(vistaSpese.formatiCella['2,1'], 'dd/mm/yy');
   assert.equal(vistaSpese.stili['2,4'].aCapo, 'CLIP', 'il link della ricevuta non allarga la riga');
+  for (const cella of ['1,1', '1,4', '2,2', `${vistaSpese.getMaxRows()},3`]) {
+    assert.equal(vistaSpese.stili[cella].allineamento, 'center', `${cella} centrata in orizzontale`);
+    assert.equal(vistaSpese.stili[cella].verticale, 'middle', `${cella} centrata in verticale`);
+  }
 });
 
 test('un foglio creato da una versione precedente viene riformattato una volta sola', () => {

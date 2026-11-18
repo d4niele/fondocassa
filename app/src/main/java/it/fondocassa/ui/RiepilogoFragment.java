@@ -123,7 +123,8 @@ public class RiepilogoFragment extends Fragment {
         for (int p : pendenti) {
             daSincronizzare += p;
         }
-        testo(v, R.id.testo_sync, getString(R.string.stato_sync, daSincronizzare, ultimaSync()));
+        testo(v, R.id.testo_sync, getString(R.string.stato_sync, ultimaSync()));
+        testo(v, R.id.bottone_sincronizza, getString(R.string.sincronizza_record, daSincronizzare));
     }
 
     private static void testo(View radice, int id, String valore) {

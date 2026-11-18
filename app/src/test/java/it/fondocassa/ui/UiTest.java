@@ -120,6 +120,9 @@ public class UiTest {
                 assertEquals("€ 5,00", testo(a, R.id.testo_versato));
                 assertEquals("€ 5,00", testo(a, R.id.testo_da_versare));
                 assertEquals(a.getString(R.string.alunni_in_regola_valore, 1, 2), testo(a, R.id.testo_in_regola));
+                // Alunni, quota ed entrata non ancora inviati al foglio: il numero sta sul pulsante.
+                assertEquals("Sincronizza 4 record", testo(a, R.id.bottone_sincronizza));
+                assertEquals("Ultima sincr.: Mai", testo(a, R.id.testo_sync));
                 assertEquals("senza fondo la riga resta nascosta", android.view.View.GONE,
                         a.findViewById(R.id.testo_fondo_incluso).getVisibility());
             });

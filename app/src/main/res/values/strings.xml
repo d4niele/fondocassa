@@ -35,7 +35,8 @@
     <string name="quote_nessuna">Nessuna quota definita: aggiungila nella scheda Quote</string>
     <string name="totale_uscite">Totale spese</string>
     <string name="alunni_in_regola_valore">%1$d alunni in regola su %2$d</string>
-    <string name="stato_sync">Da sincronizzare: %1$d record · Ultima sincronizzazione: %2$s</string>
+    <string name="stato_sync">Ultima sincr.: %1$s</string>
+    <string name="sincronizza_record">Sincronizza %1$d record</string>
     <string name="mai">Mai</string>
 
     <string name="sync_in_corso">Sincronizzazione in corso…</string>

@@ -155,7 +155,11 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
   const spese = env.ss.getSheetByName('Vista_Spese');
   assert.equal(env.ss.fogli[2], spese, 'le spese sono il terzo foglio');
   assert.deepEqual(spese.getRange(1, 1, 1, 4).getValues()[0], ['Data', 'Descrizione', 'Importo', 'Ricevuta']);
-  assert.match(spese.formule['2,1'], /QUERY\(Sync_Spese!A2:F,"select D, B, E, F where A is not null order by D desc",0\)/);
+  assert.match(spese.formule['2,1'], /QUERY\(Sync_Spese!A2:F,"select D, B, E where A is not null order by D desc, A asc",0\)/);
+  // La ricevuta è un collegamento con la scritta «Ricevuta», ordinato come le altre colonne.
+  assert.equal(spese.formule['2,4'], '=IFERROR(ARRAYFORMULA(IF('
+    + 'QUERY(Sync_Spese!A2:F,"select F where A is not null order by D desc, A asc",0)="","",HYPERLINK('
+    + 'QUERY(Sync_Spese!A2:F,"select F where A is not null order by D desc, A asc",0),"Ricevuta"))),"")');
 });
 
 test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto serve', () => {
@@ -274,7 +278,8 @@ test('in un foglio in italiano le formule usano il punto e virgola', () => {
   assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,3'], /"non attivo";IF\(/);
   // Le virgole dentro le stringhe (il linguaggio di QUERY) non vanno toccate.
   const spese = env.ss.getSheetByName('Vista_Spese');
-  assert.match(spese.formule['2,1'], /"select D, B, E, F where A is not null order by D desc";0\);""\)$/);
+  assert.match(spese.formule['2,1'], /"select D, B, E where A is not null order by D desc, A asc";0\);""\)$/);
+  assert.match(spese.formule['2,4'], /\)="";"";HYPERLINK\(QUERY\(.*;0\);"Ricevuta"\)\)\);""\)$/);
   const tutte = Object.values(vista.formule).concat(Object.values(entrate.formule), Object.values(spese.formule));
   assert.ok(tutte.every((f) => !/,/.test(f.replace(/"[^"]*"/g, ''))), 'nessuna virgola tra gli argomenti');
   // La cella usata per la prova del separatore viene ripulita.

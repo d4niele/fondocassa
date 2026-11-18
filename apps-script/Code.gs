@@ -50,7 +50,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '13';
+var VERSIONE_FORMATO = '14';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -593,6 +593,7 @@ var VISTA_CORPO_GRANDE = 14;
 var VISTA_CORPO_SPIEGAZIONE = 9;
 var VISTA_GRIGIO = '#5f6368';
 var VISTA_LINEA = '#dadce0';
+var VISTA_ETICHETTA_RICEVUTA = 'Ricevuta';
 var VISTA_RIMANDO = '↳ ';
 
 /** Versato da ogni alunno di Sync_Alunni, nello stesso ordine. */
@@ -800,10 +801,15 @@ function spiegazione_(vista, riga) {
 function componiVistaSpese_(ss, vista) {
   svuotaVista_(vista, 4);
   vista.getRange(1, 1, 1, 4).setValues([['Data', 'Descrizione', 'Importo', 'Ricevuta']]);
-  // L'indirizzo della ricevuta resta testo semplice: sul telefono si apre con un tocco e,
-  // a differenza di un collegamento con HYPERLINK, arriva intatto anche con IMPORTRANGE.
-  scriviFormule_(ss, vista, [['A2', '=IFERROR(QUERY(Sync_Spese!A2:F,'
-    + '"select D, B, E, F where A is not null order by D desc",0),"")']]);
+  // La ricevuta è un collegamento con la scritta «Ricevuta» al posto dell'indirizzo. QUERY non
+  // produce collegamenti, quindi la colonna D ha una sua formula con lo stesso ordinamento
+  // (a parità di data decide l'id, così le due formule restano allineate riga per riga).
+  var ordine = ' where A is not null order by D desc, A asc';
+  var link = 'QUERY(Sync_Spese!A2:F,"select F' + ordine + '",0)';
+  scriviFormule_(ss, vista, [
+    ['A2', '=IFERROR(QUERY(Sync_Spese!A2:F,"select D, B, E' + ordine + '",0),"")'],
+    ['D2', '=IFERROR(ARRAYFORMULA(IF(' + link + '="","",HYPERLINK(' + link + ',"' + VISTA_ETICHETTA_RICEVUTA + '"))),"")']
+  ]);
   estetica_(function () {
     var righe = vista.getMaxRows() - 1;
     vista.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);

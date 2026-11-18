@@ -124,9 +124,10 @@ public class RiepilogoFragment extends Fragment {
             daSincronizzare += p;
         }
         testo(v, R.id.testo_sync, getString(R.string.stato_sync, ultimaSync()));
-        testo(v, R.id.bottone_sincronizza, daSincronizzare > 0
-                ? getString(R.string.sincronizza_record, daSincronizzare)
-                : getString(R.string.azione_sincronizza));
+        // Con tutto già inviato il pulsante sparisce: resta l'icona di sincronizzazione nella barra.
+        View bottone = v.findViewById(R.id.bottone_sincronizza);
+        bottone.setVisibility(daSincronizzare > 0 ? View.VISIBLE : View.GONE);
+        testo(v, R.id.bottone_sincronizza, getString(R.string.sincronizza_record, daSincronizzare));
     }
 
     private static void testo(View radice, int id, String valore) {

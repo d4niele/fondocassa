@@ -127,12 +127,18 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
   assert.match(vista.formule['15,2'], /^=SUMPRODUCT\(.*\(B18-SUMIF/);
   assert.equal(vista.formule['18,2'], '=SUM(Sync_Quote!C2:C)');
   assert.equal(vista.formule['22,2'], '=B18*B20');
-  assert.equal(vista.formule['24,2'], '=COUNTIF(C29:C,"✓")&" su "&B20');
-  assert.equal(vista.cella(27, 1), 'Manca: quanto deve ancora versare l\'alunno. ✓ vuol dire in regola.');
-  assert.deepEqual(vista.getRange(28, 1, 1, 3).getValues()[0], ['Alunno', 'Versato', 'Manca']);
-  assert.match(vista.formule['29,1'], /^=ARRAYFORMULA\(IF\(Sync_Alunni!A2:A="","",Sync_Alunni!B2:B\)\)$/);
-  assert.match(vista.formule['29,2'], /SUMIF\(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D\)/);
-  assert.match(vista.formule['29,3'], /"non attivo",IF\(\$B\$18-SUMIF.*,"✓"\)/);
+  assert.match(vista.formule['24,2'], /^=SUMPRODUCT\(.*\(B18-SUMIF.*<=0\)\)&" su "&B20$/);
+  // Il bilancio non contiene dati dei singoli: si può pubblicare da solo.
+  assert.equal(vista.getLastRow(), 25);
+  assert.ok(Object.values(vista.formule).every((f) => !/ARRAYFORMULA|Sync_Alunni!B/.test(f)), 'nessun nome di alunno');
+
+  const alunni = env.ss.getSheetByName('Vista_Alunni');
+  assert.equal(env.ss.fogli[1], alunni, 'gli alunni sono il secondo foglio');
+  assert.equal(alunni.cella(2, 1), 'Manca: quanto deve ancora versare l\'alunno. ✓ vuol dire in regola.');
+  assert.deepEqual(alunni.getRange(3, 1, 1, 3).getValues()[0], ['Alunno', 'Versato', 'Manca']);
+  assert.match(alunni.formule['4,1'], /^=ARRAYFORMULA\(IF\(Sync_Alunni!A2:A="","",Sync_Alunni!B2:B\)\)$/);
+  assert.match(alunni.formule['4,2'], /SUMIF\(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D\)/);
+  assert.match(alunni.formule['4,3'], /"non attivo",IF\(SUM\(Sync_Quote!C2:C\)-SUMIF.*,"✓"\)/);
   // Nessuna voce senza spiegazione, e nessuna spiegazione senza valore accanto.
   for (let riga = 4; riga <= 24; riga += 1) {
     const etichetta = vista.cella(riga, 1);
@@ -145,7 +151,7 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
   assert.equal(Object.keys(vista.formule).filter((k) => Number(k.split(',')[1]) > 3).length, 0);
 
   const spese = env.ss.getSheetByName('Vista_Spese');
-  assert.equal(env.ss.fogli[1], spese, 'le spese sono il secondo foglio');
+  assert.equal(env.ss.fogli[2], spese, 'le spese sono il terzo foglio');
   assert.deepEqual(spese.getRange(1, 1, 1, 4).getValues()[0], ['Data', 'Descrizione', 'Importo', 'Ricevuta']);
   assert.match(spese.formule['2,1'], /QUERY\(Sync_Spese!A2:F,"select D, B, E, F where A is not null order by D desc",0\)/);
 });
@@ -169,13 +175,17 @@ test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto s
   const vista = env.ss.getSheetByName('Vista_Classe');
   assert.equal(vista.formatiCella['4,2'], '#,##0.00" €"');
   assert.equal(vista.formatiCella['20,2'], '0', 'il numero di alunni non è un importo');
-  assert.equal(vista.formatiCella['29,3'], '[Red]#,##0.00" €"', 'quanto manca è in rosso');
+  const alunni = env.ss.getSheetByName('Vista_Alunni');
+  assert.equal(alunni.formatiCella['4,3'], '[Red]#,##0.00" €"', 'quanto manca è in rosso');
+  assert.equal(alunni.formatiCella['4,2'], '#,##0.00" €"');
+  assert.equal(alunni.righeBloccate, 0);
+  assert.ok(Object.values(alunni.larghezze).reduce((a, b) => a + b, 0) <= 380);
   assert.equal(vista.stili['4,2'].corpo, 14, 'la cassa reale è in evidenza');
   // Le spiegazioni sono piccole, grigie, su tutta la larghezza e vanno a capo.
   assert.ok(vista.unioni.some(([r, c, nr, nc]) => r === 5 && c === 1 && nr === 1 && nc === 3));
   assert.equal(vista.stili['5,1'].corpo, 9);
   assert.equal(vista.stili['5,1'].aCapo, true);
-  assert.equal(vista.unioni.length, 11, 'dieci voci più la nota sulla tabella degli alunni');
+  assert.equal(vista.unioni.length, 10, 'una spiegazione per ognuna delle dieci voci');
   // Pensata per il telefono: larga quanto uno schermo in verticale, senza righe bloccate.
   const larghezza = Object.values(vista.larghezze).reduce((a, b) => a + b, 0);
   assert.ok(larghezza <= 380, `Vista_Classe larga ${larghezza} px`);
@@ -249,8 +259,8 @@ test('in un foglio in italiano le formule usano il punto e virgola', () => {
     '=ARRAYFORMULA(IF(B2:B="";"";IFERROR(VLOOKUP(B2:B;Sync_Alunni!A:B;2;FALSE);"?")))');
   const vista = env.ss.getSheetByName('Vista_Classe');
   assert.equal(vista.formule['20,2'], '=COUNTIFS(Sync_Alunni!A2:A;"<>";Sync_Alunni!C2:C;TRUE)');
-  assert.equal(vista.formule['24,2'], '=COUNTIF(C29:C;"✓")&" su "&B20');
-  assert.match(vista.formule['29,3'], /"non attivo";IF\(/);
+  assert.match(vista.formule['24,2'], /<=0\)\)&" su "&B20$/);
+  assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,3'], /"non attivo";IF\(/);
   // Le virgole dentro le stringhe (il linguaggio di QUERY) non vanno toccate.
   const spese = env.ss.getSheetByName('Vista_Spese');
   assert.match(spese.formule['2,1'], /"select D, B, E, F where A is not null order by D desc";0\);""\)$/);
@@ -273,7 +283,7 @@ test('le formule con #ERROR! di una versione precedente vengono riscritte', () =
   env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
 
   assert.match(env.ss.getSheetByName('Sync_Entrate').formule['2,8'], /^=ARRAYFORMULA\(IF\(B2:B="";"";/);
-  assert.match(vista.formule['29,1'], /^=ARRAYFORMULA\(IF\(Sync_Alunni!A2:A="";"";/);
+  assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,1'], /^=ARRAYFORMULA\(IF\(Sync_Alunni!A2:A="";"";/);
   assert.equal(vista.cella(1, 12), 'nota del rappresentante', 'oltre la colonna J la vista non tocca nulla');
 });
 
@@ -471,12 +481,12 @@ test('setup crea fogli, cartella e un token che resta stabile', () => {
 
   assert.equal(token.length, 64);
   assert.deepEqual(env.ss.fogli.map((f) => f.nome),
-    ['Vista_Classe', 'Vista_Spese', 'Sync_Alunni', 'Sync_Quote', 'Sync_Entrate', 'Sync_Spese', 'Sync_Fondi']);
+    ['Vista_Classe', 'Vista_Alunni', 'Vista_Spese', 'Sync_Alunni', 'Sync_Quote', 'Sync_Entrate', 'Sync_Spese', 'Sync_Fondi']);
   assert.equal(env.drive.cartelle.length, 1);
   assert.equal(env.get({ action: 'ping', token }).ok, true);
 
   assert.equal(env.gs.setup(), token, 'rieseguire setup non cambia il token');
-  assert.equal(env.ss.fogli.length, 7);
+  assert.equal(env.ss.fogli.length, 8);
 
   const nuovo = env.gs.rigeneraToken();
   assert.notEqual(nuovo, token);
@@ -583,7 +593,7 @@ test('ogni foglio ha solo le colonne che usa', () => {
 
   const colonne = Object.fromEntries(env.ss.fogli.map((f) => [f.getName(), f.getMaxColumns()]));
   assert.deepEqual(colonne, {
-    Vista_Classe: 3, Vista_Spese: 4, Sync_Alunni: 5, Sync_Quote: 5, Sync_Entrate: 8, Sync_Spese: 7, Sync_Fondi: 5,
+    Vista_Classe: 3, Vista_Alunni: 3, Vista_Spese: 4, Sync_Alunni: 5, Sync_Quote: 5, Sync_Entrate: 8, Sync_Spese: 7, Sync_Fondi: 5,
   });
   // Le sincronizzazioni successive continuano a funzionare con le colonne ridotte.
   const r = env.post({ token: TOKEN, action: 'sync', alunni: [marco], entrate: [{ ...entrata, importo_cent: 300 }] });
@@ -615,4 +625,22 @@ test('ricomporre la vista non accumula celle unite', () => {
   env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
 
   assert.equal(vista.unioni.length, prima);
+});
+
+test('la tabella degli alunni lascia Vista_Classe e va nella sua scheda', () => {
+  const env = ambiente();
+  env.post({ token: TOKEN, action: 'sync', alunni: [anna] });
+  // Stato della versione precedente: tabella degli alunni in Vista_Classe dalla riga 29.
+  env.ss.fogli = env.ss.fogli.filter((f) => f.getName() !== 'Vista_Alunni');
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  vista.formule['29,1'] = '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",Sync_Alunni!B2:B))';
+  vista.scrivi(28, 1, 'Alunno');
+  env.proprieta.set('FORMATO_FOGLI', '8');
+
+  env.post({ token: TOKEN, action: 'sync', alunni: [marco] });
+
+  assert.equal(vista.formule['29,1'], undefined);
+  assert.equal(vista.cella(28, 1), '');
+  assert.deepEqual(env.ss.fogli.slice(0, 3).map((f) => f.getName()), ['Vista_Classe', 'Vista_Alunni', 'Vista_Spese']);
+  assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,1'], /Sync_Alunni!B2:B/);
 });

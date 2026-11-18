@@ -132,6 +132,19 @@ public class UiTest {
             scenario.onActivity(a -> {
                 assertEquals(android.view.View.VISIBLE, a.findViewById(R.id.testo_fondo_incluso).getVisibility());
                 assertEquals("di cui fondo iniziale € 37,50", testo(a, R.id.testo_fondo_incluso));
+            });
+
+            // Tutto inviato: il pulsante torna a dire solo «Sincronizza».
+            app.io().submit(() -> {
+                String ts = "2026-11-18T10:00:00Z";
+                app.db().alunni().pendenti().forEach(x -> app.db().alunni().confermaSync(x.id, x.aggiornato, ts));
+                app.db().quote().pendenti().forEach(x -> app.db().quote().confermaSync(x.id, x.aggiornato, ts));
+                app.db().entrate().pendenti().forEach(x -> app.db().entrate().confermaSync(x.id, x.aggiornato, ts));
+                app.db().fondi().pendenti().forEach(x -> app.db().fondi().confermaSync(x.id, x.aggiornato, ts));
+            }).get();
+            attendi();
+            scenario.onActivity(a -> assertEquals("Sincronizza", testo(a, R.id.bottone_sincronizza)));
+            scenario.onActivity(a -> {
                 assertEquals("€ 42,50", testo(a, R.id.testo_cassa_reale));
                 assertEquals("€ 47,50", testo(a, R.id.testo_cassa_virtuale));
                 assertEquals("€ 5,00", testo(a, R.id.testo_versato));

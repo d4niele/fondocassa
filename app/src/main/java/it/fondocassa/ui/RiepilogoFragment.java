@@ -124,7 +124,9 @@ public class RiepilogoFragment extends Fragment {
             daSincronizzare += p;
         }
         testo(v, R.id.testo_sync, getString(R.string.stato_sync, ultimaSync()));
-        testo(v, R.id.bottone_sincronizza, getString(R.string.sincronizza_record, daSincronizzare));
+        testo(v, R.id.bottone_sincronizza, daSincronizzare > 0
+                ? getString(R.string.sincronizza_record, daSincronizzare)
+                : getString(R.string.azione_sincronizza));
     }
 
     private static void testo(View radice, int id, String valore) {

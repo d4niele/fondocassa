@@ -118,7 +118,7 @@ Vista_Spese   solo formule: registro delle uscite
 - I fogli `Sync_*` sono le tabelle grezze, 1:1 con SQLite: **non vanno modificati a mano** (ogni riga ha anche `timestamp_sync`).
 - Date (`gg/mm/aaaa`), importi in euro e data dell'ultima sincronizzazione sono formattati per la lettura, e le colonne hanno larghezze adatte al contenuto. I fogli creati da una versione precedente vengono riformattati da soli alla prima sincronizzazione dopo l'aggiornamento di `Code.gs`; da lì in poi le larghezze che cambi a mano restano.
 - Le due viste contengono solo formule, si aggiornano da sole a ogni sincronizzazione e sono pensate per essere lette **dal telefono**: colonne strette che stanno in uno schermo in verticale, nessuna riga bloccata, niente griglia.
-  - `Vista_Classe`: in cima *In cassa adesso* e *Cassa virtuale*, poi fondo iniziale, versato, spese, da versare, quota a testa, previsto e quanti alunni sono in regola; sotto, una riga per alunno con *Versato* e *Manca* (in rosso, o ✓ se è in regola).
+  - `Vista_Classe`: in cima *In cassa adesso* e *Cassa virtuale*, poi fondo iniziale, versato, spese, da versare, quota a testa, previsto e quanti alunni sono in regola, ognuna con sotto una riga in piccolo che spiega cosa significa; in fondo, una riga per alunno con *Versato* e *Manca* (in rosso, o ✓ se è in regola).
   - `Vista_Spese`: data, descrizione, importo e link alla ricevuta, dalla spesa più recente.
 - Ogni foglio ha solo le colonne che usa: quelle vuote a destra vengono eliminate (una colonna con qualcosa scritto a mano resta).
 - Le colonne A:J di `Vista_Classe` sono gestite dallo script: eventuali appunti vanno scritti più a destra o in un altro foglio.
@@ -151,7 +151,13 @@ valori ma non la formattazione: seleziona le colonne degli importi (`B:C` nella 
 nella seconda) e scegli *Formato → Numero → Valuta*, poi allarga le colonne come preferisci.
 
 Condividi quel secondo foglio come *Visualizzatore*. Se preferisci non mostrare gli importi dei
-singoli, importa solo il bilancio: `Vista_Classe!A1:B15`.
+singoli, importa solo il bilancio con le spiegazioni: `Vista_Classe!A1:C25`.
+
+Google Sheets non permette di nascondere i numeri di riga e le lettere delle colonne. Per una
+pagina più pulita da telefono, senza intestazioni né menu, puoi pubblicare **il foglio dei
+genitori** (mai quello privato): *File → Condividi → Pubblica sul web*, scegli la scheda e copia
+il link, poi aggiungi in fondo `&headers=false&widget=false`. Chiunque abbia quel link vede la
+pagina senza accedere a Google.
 
 ### Sicurezza
 

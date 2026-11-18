@@ -49,7 +49,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '7';
+var VERSIONE_FORMATO = '8';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -560,41 +560,86 @@ function aggiornaFormato_(ss) {
 // ---------------------------------------------------------------------------
 
 /*
- * Vista_Classe, tre colonne strette (circa 360 px, la larghezza di un telefono in verticale):
+ * Vista_Classe, tre colonne strette (circa 360 px, la larghezza di un telefono in verticale).
+ * Ogni voce del bilancio ha sotto, in piccolo, una riga che spiega cosa significa:
  *
- *    1  Fondocassa di classe
- *    2  Aggiornato al 17/11/2026 19:23
- *    4  In cassa adesso        € 82,00      ← la cifra che interessa di più, in evidenza
- *    5  Cassa virtuale         € 122,00
- *    7  Fondo iniziale  /  8 Versato  /  9 Spese  /  10 Da versare
- *   12  Quota a testa  /  13 Alunni attivi  /  14 Previsto  /  15 In regola (12 su 20)
- *   17  Alunno | Versato | Manca                ← una riga per alunno, "✓" se è in regola
+ *    Fondocassa di classe
+ *    Aggiornato al 17/11/2026 19:23
+ *
+ *    In cassa adesso                 € 82,00   ← la cifra che interessa di più, in evidenza
+ *    Fondo iniziale + versato − spese: i soldi che ci sono davvero
+ *    Cassa virtuale                 € 122,00
+ *    Quanto avremmo se tutti versassero le quote
+ *    …
+ *    Alunno | Versato | Manca                   ← una riga per alunno, "✓" se è in regola
  *
  * Vista_Spese, quattro colonne: Data | Descrizione | Importo | Ricevuta, dalla più recente.
  * Nessuna riga bloccata: sul telefono ruberebbe metà dello schermo.
  */
 var FOGLIO_VISTA_SPESE = 'Vista_Spese';
 var VISTA_CELLA_AGGIORNAMENTO = 'A2';
-var VISTA_RIGA_ALUNNI = 18;
 var VISTA_LARGHEZZE = [170, 95, 95];
 var VISTA_SPESE_LARGHEZZE = [75, 150, 80, 75];
 var VISTA_CORPO_GRANDE = 14;
-var VISTA_ETICHETTE = [
-  [1, 'Fondocassa di classe'],
-  [4, 'In cassa adesso'],
-  [5, 'Cassa virtuale'],
-  [7, 'Fondo iniziale'],
-  [8, 'Versato'],
-  [9, 'Spese'],
-  [10, 'Da versare'],
-  [12, 'Quota a testa'],
-  [13, 'Alunni attivi'],
-  [14, 'Previsto'],
-  [15, 'In regola']
-];
+var VISTA_CORPO_SPIEGAZIONE = 9;
+var VISTA_GRIGIO = '#5f6368';
 
 /** Versato da ogni alunno di Sync_Alunni, nello stesso ordine. */
 var VERSATO_PER_ALUNNO = 'SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)';
+
+/**
+ * Voci del bilancio, dall'alto in basso; null lascia una riga vuota tra un gruppo e l'altro.
+ * Nelle formule {id} diventa la cella del valore di un'altra voce, {alunni} la prima riga della
+ * tabella degli alunni.
+ */
+var VISTA_VOCI = [
+  { id: 'cassa', etichetta: 'In cassa adesso', grande: true, formula: '={fondo}+{versato}-{spese}',
+    spiegazione: 'Fondo iniziale + versato − spese: i soldi che ci sono davvero' },
+  { id: 'virtuale', etichetta: 'Cassa virtuale', formula: '={cassa}+{daVersare}',
+    spiegazione: 'Quanto avremmo se tutti versassero le quote (in cassa + da versare)' },
+  null,
+  { id: 'fondo', etichetta: 'Fondo iniziale', formula: '=SUM(Sync_Fondi!C2:C)',
+    spiegazione: 'Avanzo degli anni passati, con cui la cassa è partita' },
+  { id: 'versato', etichetta: 'Versato', formula: '=SUM(Sync_Entrate!D2:D)',
+    spiegazione: 'Tutte le quote incassate dagli alunni' },
+  { id: 'spese', etichetta: 'Spese', formula: '=SUM(Sync_Spese!E2:E)',
+    spiegazione: 'Tutte le uscite: il dettaglio con le ricevute è nel foglio Vista_Spese' },
+  // Somma dei residui dei soli alunni attivi: chi ha versato di più non copre gli altri.
+  { id: 'daVersare', etichetta: 'Da versare',
+    formula: '=SUMPRODUCT((Sync_Alunni!A2:A<>"")*(Sync_Alunni!C2:C=TRUE)'
+      + '*({quota}-' + VERSATO_PER_ALUNNO + '>0)*({quota}-' + VERSATO_PER_ALUNNO + '))',
+    spiegazione: 'Quanto manca: la somma di ciò che deve ancora ogni alunno' },
+  null,
+  { id: 'quota', etichetta: 'Quota a testa', formula: '=SUM(Sync_Quote!C2:C)',
+    spiegazione: 'La somma delle quote richieste a ogni alunno' },
+  { id: 'attivi', etichetta: 'Alunni attivi', formato: '0',
+    formula: '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)',
+    spiegazione: 'Chi non è più in classe non conta' },
+  { id: 'previsto', etichetta: 'Previsto', formula: '={quota}*{attivi}',
+    spiegazione: 'Quota a testa × alunni attivi: quanto deve entrare in tutto' },
+  { id: 'inRegola', etichetta: 'In regola', formato: 'testo', formula: '=COUNTIF(C{alunni}:C,"✓")&" su "&{attivi}',
+    spiegazione: 'Alunni che hanno versato tutta la quota' }
+];
+var VISTA_SPIEGAZIONE_ALUNNI = 'Manca: quanto deve ancora versare l\'alunno. ✓ vuol dire in regola.';
+
+/** Righe di Vista_Classe: per ogni voce quella del valore e quella della spiegazione. */
+function righeVista_() {
+  var righe = { voci: {}, spiegazioni: {} };
+  var riga = 4;
+  VISTA_VOCI.forEach(function (voce) {
+    if (!voce) {
+      riga++;
+      return;
+    }
+    righe.voci[voce.id] = riga;
+    righe.spiegazioni[voce.id] = riga + 1;
+    riga += 2;
+  });
+  righe.spiegazioneAlunni = riga + 1;
+  righe.intestazioneAlunni = riga + 2;
+  righe.alunni = riga + 3;
+  return righe;
+}
 
 function aggiornaVista_(ss, timestamp) {
   var vista = ss.getSheetByName(FOGLIO_VISTA) || creaVista_(ss);
@@ -627,54 +672,86 @@ function creaVistaSpese_(ss) {
  * anche il registro delle uscite): vengono svuotate, quello che sta più a destra resta.
  */
 function componiVista_(ss, vista) {
-  var r = VISTA_RIGA_ALUNNI;
-  vista.getRange(1, 1, vista.getMaxRows(), Math.min(10, vista.getMaxColumns())).clear();
+  var righe = righeVista_();
+  var r = righe.alunni;
+  var tutta = vista.getRange(1, 1, vista.getMaxRows(), Math.min(10, vista.getMaxColumns()));
+  tutta.breakApart();
+  tutta.clear();
   vista.setFrozenRows(0);
-  VISTA_ETICHETTE.forEach(function (etichetta) {
-    vista.getRange(etichetta[0], 1).setValue(etichetta[1]);
-  });
-  vista.getRange(r - 1, 1, 1, 3).setValues([['Alunno', 'Versato', 'Manca']]);
 
-  var formule = [
-    ['B4', '=B7+B8-B9'],
-    ['B5', '=B4+B10'],
-    ['B7', '=SUM(Sync_Fondi!C2:C)'],
-    ['B8', '=SUM(Sync_Entrate!D2:D)'],
-    ['B9', '=SUM(Sync_Spese!E2:E)'],
-    // Somma dei residui dei soli alunni attivi: chi ha versato di più non copre gli altri.
-    ['B10', '=SUMPRODUCT((Sync_Alunni!A2:A<>"")*(Sync_Alunni!C2:C=TRUE)'
-      + '*(B12-' + VERSATO_PER_ALUNNO + '>0)*(B12-' + VERSATO_PER_ALUNNO + '))'],
-    ['B12', '=SUM(Sync_Quote!C2:C)'],
-    ['B13', '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)'],
-    ['B14', '=B12*B13'],
-    ['B15', '=COUNTIF(C' + r + ':C,"✓")&" su "&B13'],
-    // Una riga per alunno, collegata per alunno_id. "Manca" è un importo, "✓" o "non attivo".
-    ['A' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",Sync_Alunni!B2:B))'],
-    ['B' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",' + VERSATO_PER_ALUNNO + '))'],
-    ['C' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",IF(Sync_Alunni!C2:C=FALSE,"non attivo",'
-      + 'IF($B$12-' + VERSATO_PER_ALUNNO + '>0,$B$12-' + VERSATO_PER_ALUNNO + ',"✓"))))']
-  ];
+  vista.getRange('A1').setValue('Fondocassa di classe');
+  var cella = function (id) {
+    return 'B' + righe.voci[id];
+  };
+  var formule = [];
+  VISTA_VOCI.forEach(function (voce) {
+    if (!voce) {
+      return;
+    }
+    vista.getRange(righe.voci[voce.id], 1).setValue(voce.etichetta);
+    vista.getRange(righe.spiegazioni[voce.id], 1).setValue(voce.spiegazione);
+    var formula = voce.formula
+      .replace(/\{alunni\}/g, String(r))
+      .replace(/\{(\w+)\}/g, function (tutto, id) {
+        return cella(id);
+      });
+    formule.push([cella(voce.id), formula]);
+  });
+  vista.getRange(righe.spiegazioneAlunni, 1).setValue(VISTA_SPIEGAZIONE_ALUNNI);
+  vista.getRange(righe.intestazioneAlunni, 1, 1, 3).setValues([['Alunno', 'Versato', 'Manca']]);
+  // Una riga per alunno, collegata per alunno_id. "Manca" è un importo, "✓" o "non attivo".
+  formule.push(['A' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",Sync_Alunni!B2:B))']);
+  formule.push(['B' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",' + VERSATO_PER_ALUNNO + '))']);
+  formule.push(['C' + r, '=ARRAYFORMULA(IF(Sync_Alunni!A2:A="","",IF(Sync_Alunni!C2:C=FALSE,"non attivo",'
+    + 'IF(' + assoluta_(cella('quota')) + '-' + VERSATO_PER_ALUNNO + '>0,'
+    + assoluta_(cella('quota')) + '-' + VERSATO_PER_ALUNNO + ',"✓"))))']);
   scriviFormule_(ss, vista, formule);
 
   estetica_(function () {
     vista.getRange('A1').setFontWeight('bold').setFontSize(VISTA_CORPO_GRANDE);
-    vista.getRange('A2').setFontColor('#5f6368');
-    vista.getRange('A4:B4').setFontWeight('bold').setFontSize(VISTA_CORPO_GRANDE);
-    vista.getRange('B4:B14').setNumberFormat(FORMATI.euro);
-    vista.getRange('B13').setNumberFormat('0');
-    vista.getRange('B15').setHorizontalAlignment('right');
+    vista.getRange('A2').setFontColor(VISTA_GRIGIO);
+    VISTA_VOCI.forEach(function (voce) {
+      if (!voce) {
+        return;
+      }
+      var valore = vista.getRange(cella(voce.id));
+      if (voce.formato === 'testo') {
+        valore.setHorizontalAlignment('right');
+      } else {
+        valore.setNumberFormat(voce.formato || FORMATI.euro);
+      }
+      if (voce.grande) {
+        vista.getRange(righe.voci[voce.id], 1, 1, 2).setFontWeight('bold').setFontSize(VISTA_CORPO_GRANDE);
+      }
+      spiegazione_(vista, righe.spiegazioni[voce.id]);
+    });
+    spiegazione_(vista, righe.spiegazioneAlunni);
     vista.getRange(r - 1, 1, 1, 3).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
     vista.getRange(r - 1, 2, 1, 2).setHorizontalAlignment('right');
-    var righe = vista.getMaxRows() - r + 1;
-    vista.getRange(r, 2, righe, 1).setNumberFormat(FORMATI.euro);
+    var quante = vista.getMaxRows() - r + 1;
+    vista.getRange(r, 2, quante, 1).setNumberFormat(FORMATI.euro);
     // Quanto manca in rosso; "✓" e "non attivo" sono testo e restano neri.
-    vista.getRange(r, 3, righe, 1).setNumberFormat('[Red]#,##0.00" €"').setHorizontalAlignment('right');
+    vista.getRange(r, 3, quante, 1).setNumberFormat('[Red]#,##0.00" €"').setHorizontalAlignment('right');
     VISTA_LARGHEZZE.forEach(function (larghezza, i) {
       vista.setColumnWidth(i + 1, larghezza);
     });
     vista.setHiddenGridlines(true);
     togliColonneVuote_(vista, VISTA_LARGHEZZE.length);
   });
+}
+
+/** Riga di spiegazione: piccola, grigia, su tutta la larghezza della vista e a capo se serve. */
+function spiegazione_(vista, riga) {
+  vista.getRange(riga, 1, 1, VISTA_LARGHEZZE.length).merge()
+    .setFontSize(VISTA_CORPO_SPIEGAZIONE)
+    .setFontColor(VISTA_GRIGIO)
+    .setVerticalAlignment('top')
+    .setWrap(true);
+}
+
+/** "B20" → "$B$20". */
+function assoluta_(cella) {
+  return cella.replace(/^([A-Z]+)(\d+)$/, '$$$1$$$2');
 }
 
 function componiVistaSpese_(ss, vista) {

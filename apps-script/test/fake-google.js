@@ -98,6 +98,22 @@ class FakeRange {
     return this.stile('allineamento', v);
   }
 
+  setVerticalAlignment(v) {
+    return this.stile('verticale', v);
+  }
+
+  merge() {
+    this.sheet.unioni.push([this.row, this.col, this.numRows, this.numCols]);
+    return this;
+  }
+
+  /** Scioglie le celle unite che iniziano dentro l'intervallo. */
+  breakApart() {
+    this.sheet.unioni = this.sheet.unioni.filter(([r, c]) => !(r >= this.row && r < this.row + this.numRows
+      && c >= this.col && c < this.col + this.numCols));
+    return this;
+  }
+
   setWrap(v) {
     return this.stile('aCapo', v);
   }
@@ -149,6 +165,7 @@ class FakeSheet {
     this.sfondi = {};
     this.larghezze = {};
     this.stili = {};
+    this.unioni = [];
     this.righeBloccate = 0;
     this.grigliaNascosta = false;
     this.colonne = 26;

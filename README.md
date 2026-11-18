@@ -155,9 +155,19 @@ singoli, importa solo il bilancio con le spiegazioni: `Vista_Classe!A1:C25`.
 
 Google Sheets non permette di nascondere i numeri di riga e le lettere delle colonne. Per una
 pagina più pulita da telefono, senza intestazioni né menu, puoi pubblicare **il foglio dei
-genitori** (mai quello privato): *File → Condividi → Pubblica sul web*, scegli la scheda e copia
-il link, poi aggiungi in fondo `&headers=false&widget=false`. Chiunque abbia quel link vede la
-pagina senza accedere a Google.
+genitori** (mai quello privato): *File → Condividi → Pubblica sul web*, scegli la scheda (non
+«Intero documento») e il formato *Pagina web*, premi *Pubblica* e copia il link che compare. È un
+link diverso da quello del foglio: contiene `/d/e/2PACX-…/pubhtml`. Aggiungi in fondo i parametri
+che tolgono intestazioni, schede e titolo:
+
+```
+https://docs.google.com/spreadsheets/d/e/2PACX-…/pubhtml?gid=…&single=true&widget=false&headers=false&chrome=false
+```
+
+Se il link finisce con `/pubhtml`, senza `?`, il primo parametro va attaccato con `?` invece che
+con `&`. I parametri non hanno effetto sul link di modifica (`/edit`). Chiunque abbia il link
+pubblicato vede la pagina senza accedere a Google; si aggiorna da sola, con qualche minuto di
+ritardo rispetto al foglio.
 
 ### Sicurezza
 

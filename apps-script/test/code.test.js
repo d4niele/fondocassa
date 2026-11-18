@@ -116,7 +116,7 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
   assert.equal(env.ss.fogli[0], vista, 'la vista è il primo foglio');
   assert.equal(vista.cella(4, 1), 'In cassa adesso');
   // Ogni voce occupa due righe: il valore e, sotto, la spiegazione.
-  assert.equal(vista.cella(5, 1), 'Fondo iniziale + versato − spese: i soldi che ci sono davvero');
+  assert.equal(vista.cella(5, 1), '↳ Fondo iniziale + versato − spese: i soldi che ci sono davvero');
   assert.equal(vista.formule['4,2'], '=B9+B11-B13', 'in cassa: fondo iniziale + versato - spese');
   assert.equal(vista.cella(6, 1), 'Cassa virtuale');
   assert.equal(vista.formule['6,2'], '=B4+B15', 'cassa virtuale: in cassa + da versare');
@@ -126,10 +126,11 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
   assert.equal(vista.formule['13,2'], '=SUM(Sync_Spese!E2:E)');
   assert.match(vista.formule['15,2'], /^=SUMPRODUCT\(.*\(B18-SUMIF/);
   assert.equal(vista.formule['18,2'], '=SUM(Sync_Quote!C2:C)');
-  assert.equal(vista.formule['22,2'], '=B18*B20');
-  assert.match(vista.formule['24,2'], /^=SUMPRODUCT\(.*\(B18-SUMIF.*<=0\)\)&" su "&B20$/);
+  assert.equal(vista.cella(21, 1), 'Previsto', 'gli alunni attivi non hanno spiegazione');
+  assert.equal(vista.formule['21,2'], '=B18*B20');
+  assert.match(vista.formule['23,2'], /^=SUMPRODUCT\(.*\(B18-SUMIF.*<=0\)\)&" su "&B20$/);
   // Il bilancio non contiene dati dei singoli: si può pubblicare da solo.
-  assert.equal(vista.getLastRow(), 25);
+  assert.equal(vista.getLastRow(), 24);
   assert.ok(Object.values(vista.formule).every((f) => !/ARRAYFORMULA|Sync_Alunni!B/.test(f)), 'nessun nome di alunno');
 
   const alunni = env.ss.getSheetByName('Vista_Alunni');
@@ -144,8 +145,9 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
     const etichetta = vista.cella(riga, 1);
     if (!etichetta) continue;
     const valore = vista.formule[`${riga},2`];
-    if (valore) assert.ok(vista.cella(riga + 1, 1), `manca la spiegazione di ${etichetta}`);
-    else assert.ok(vista.formule[`${riga - 1},2`], `la riga ${riga} non spiega nessuna voce`);
+    if (valore) {
+      if (etichetta !== 'Alunni attivi') assert.ok(vista.cella(riga + 1, 1), `manca la spiegazione di ${etichetta}`);
+    } else assert.ok(vista.formule[`${riga - 1},2`], `la riga ${riga} non spiega nessuna voce`);
   }
   // Niente più tabelle affiancate: tutto sta in tre colonne.
   assert.equal(Object.keys(vista.formule).filter((k) => Number(k.split(',')[1]) > 3).length, 0);
@@ -185,7 +187,12 @@ test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto s
   assert.ok(vista.unioni.some(([r, c, nr, nc]) => r === 5 && c === 1 && nr === 1 && nc === 3));
   assert.equal(vista.stili['5,1'].corpo, 9);
   assert.equal(vista.stili['5,1'].aCapo, true);
-  assert.equal(vista.unioni.length, 10, 'una spiegazione per ognuna delle dieci voci');
+  assert.equal(vista.unioni.length, 9, 'una spiegazione per ogni voce tranne gli alunni attivi');
+  // La spiegazione si lega alla voce sopra: corsivo e linea che chiude il blocco sotto di lei.
+  assert.equal(vista.stili['5,1'].stile, 'italic');
+  assert.equal(vista.stili['5,1'].bordoSotto, 'SOLID #dadce0');
+  assert.equal(vista.stili['4,1'].bordoSotto, undefined, 'nessuna linea tra la voce e la sua spiegazione');
+  assert.equal(vista.stili['20,1'].bordoSotto, 'SOLID #dadce0', 'senza spiegazione la linea va sotto il valore');
   // Pensata per il telefono: larga quanto uno schermo in verticale, senza righe bloccate.
   const larghezza = Object.values(vista.larghezze).reduce((a, b) => a + b, 0);
   assert.ok(larghezza <= 380, `Vista_Classe larga ${larghezza} px`);
@@ -259,7 +266,7 @@ test('in un foglio in italiano le formule usano il punto e virgola', () => {
     '=ARRAYFORMULA(IF(B2:B="";"";IFERROR(VLOOKUP(B2:B;Sync_Alunni!A:B;2;FALSE);"?")))');
   const vista = env.ss.getSheetByName('Vista_Classe');
   assert.equal(vista.formule['20,2'], '=COUNTIFS(Sync_Alunni!A2:A;"<>";Sync_Alunni!C2:C;TRUE)');
-  assert.match(vista.formule['24,2'], /<=0\)\)&" su "&B20$/);
+  assert.match(vista.formule['23,2'], /<=0\)\)&" su "&B20$/);
   assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,3'], /"non attivo";IF\(/);
   // Le virgole dentro le stringhe (il linguaggio di QUERY) non vanno toccate.
   const spese = env.ss.getSheetByName('Vista_Spese');
@@ -547,7 +554,7 @@ test('il fondo iniziale va in Sync_Fondi, entra nella cassa reale e torna con ex
 
   const vista = env.ss.getSheetByName('Vista_Classe');
   assert.equal(vista.cella(9, 1), 'Fondo iniziale');
-  assert.equal(vista.cella(10, 1), 'Avanzo degli anni passati, con cui la cassa è partita');
+  assert.equal(vista.cella(10, 1), '↳ Avanzo degli anni passati, con cui la cassa è partita');
   assert.equal(vista.formule['9,2'], '=SUM(Sync_Fondi!C2:C)');
 
   const e = env.get({ action: 'export_all', token: TOKEN });

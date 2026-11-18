@@ -98,6 +98,15 @@ class FakeRange {
     return this.stile('allineamento', v);
   }
 
+  setFontStyle(v) {
+    return this.stile('stile', v);
+  }
+
+  /** Registra solo il bordo inferiore, l'unico usato dalle viste. */
+  setBorder(sopra, sinistra, sotto, destra, verticale, orizzontale, colore, tipo) {
+    return this.stile('bordoSotto', sotto ? `${tipo} ${colore}` : null);
+  }
+
   setVerticalAlignment(v) {
     return this.stile('verticale', v);
   }
@@ -344,6 +353,7 @@ function carica() {
     Date,
     SpreadsheetApp: {
       WrapStrategy: { CLIP: 'CLIP', WRAP: 'WRAP' },
+      BorderStyle: { SOLID: 'SOLID' },
       flush: () => {},
       newDataValidation: () => ({
         requireCheckbox() {

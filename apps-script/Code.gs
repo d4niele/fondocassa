@@ -50,7 +50,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '9';
+var VERSIONE_FORMATO = '11';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -575,9 +575,10 @@ function aggiornaFormato_(ss) {
  *    Aggiornato al 17/11/2026 19:23
  *
  *    In cassa adesso                 € 82,00   ← la cifra che interessa di più, in evidenza
- *    Fondo iniziale + versato − spese: i soldi che ci sono davvero
+ *    ↳ Fondo iniziale + versato − spese: i soldi che ci sono davvero
+ *    ───────────────────────────────────────    ← una linea chiude ogni voce
  *    Cassa virtuale                 € 122,00
- *    Quanto avremmo se tutti versassero le quote
+ *    ↳ Quanto avremmo se tutti versassero le quote
  *    …
  *
  * Nessuna riga bloccata: sul telefono ruberebbe metà dello schermo.
@@ -591,12 +592,15 @@ var VISTA_SPESE_LARGHEZZE = [75, 150, 80, 75];
 var VISTA_CORPO_GRANDE = 14;
 var VISTA_CORPO_SPIEGAZIONE = 9;
 var VISTA_GRIGIO = '#5f6368';
+var VISTA_LINEA = '#dadce0';
+var VISTA_RIMANDO = '↳ ';
 
 /** Versato da ogni alunno di Sync_Alunni, nello stesso ordine. */
 var VERSATO_PER_ALUNNO = 'SUMIF(Sync_Entrate!B2:B,Sync_Alunni!A2:A,Sync_Entrate!D2:D)';
 
 /**
  * Voci del bilancio, dall'alto in basso; null lascia una riga vuota tra un gruppo e l'altro.
+ * La spiegazione, se c'è, va nella riga sotto il valore.
  * Nelle formule {id} diventa la cella del valore di un'altra voce.
  */
 var VISTA_VOCI = [
@@ -620,8 +624,7 @@ var VISTA_VOCI = [
   { id: 'quota', etichetta: 'Quota a testa', formula: '=SUM(Sync_Quote!C2:C)',
     spiegazione: 'La somma delle quote richieste a ogni alunno' },
   { id: 'attivi', etichetta: 'Alunni attivi', formato: '0',
-    formula: '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)',
-    spiegazione: 'Chi non è più in classe non conta' },
+    formula: '=COUNTIFS(Sync_Alunni!A2:A,"<>",Sync_Alunni!C2:C,TRUE)' },
   { id: 'previsto', etichetta: 'Previsto', formula: '={quota}*{attivi}',
     spiegazione: 'Quota a testa × alunni attivi: quanto deve entrare in tutto' },
   // Calcolata qui e non contando i "✓" di Vista_Alunni: le viste non dipendono l'una dall'altra.
@@ -649,8 +652,11 @@ function righeVista_() {
       return;
     }
     righe.voci[voce.id] = riga;
-    righe.spiegazioni[voce.id] = riga + 1;
-    riga += 2;
+    riga++;
+    if (voce.spiegazione) {
+      righe.spiegazioni[voce.id] = riga;
+      riga++;
+    }
   });
   return righe;
 }
@@ -698,7 +704,10 @@ function componiVista_(ss, vista) {
       return;
     }
     vista.getRange(righe.voci[voce.id], 1).setValue(voce.etichetta);
-    vista.getRange(righe.spiegazioni[voce.id], 1).setValue(voce.spiegazione);
+    if (voce.spiegazione) {
+      // La freccia e il rientro legano la spiegazione alla voce sopra, non a quella sotto.
+      vista.getRange(righe.spiegazioni[voce.id], 1).setValue(VISTA_RIMANDO + voce.spiegazione);
+    }
     var formula = voce.formula.replace(/\{(\w+)\}/g, function (tutto, id) {
         return cella(id);
       });
@@ -722,7 +731,13 @@ function componiVista_(ss, vista) {
       if (voce.grande) {
         vista.getRange(righe.voci[voce.id], 1, 1, 2).setFontWeight('bold').setFontSize(VISTA_CORPO_GRANDE);
       }
-      spiegazione_(vista, righe.spiegazioni[voce.id]);
+      if (voce.spiegazione) {
+        spiegazione_(vista, righe.spiegazioni[voce.id]);
+      }
+      // Una linea sottile chiude ogni voce (valore e spiegazione) e la separa dalla successiva.
+      var ultima = voce.spiegazione ? righe.spiegazioni[voce.id] : righe.voci[voce.id];
+      vista.getRange(ultima, 1, 1, VISTA_LARGHEZZE.length).setBorder(null, null, true, null, null, null,
+        VISTA_LINEA, SpreadsheetApp.BorderStyle.SOLID);
     });
     stringiVista_(vista, VISTA_LARGHEZZE);
   });
@@ -777,6 +792,7 @@ function spiegazione_(vista, riga) {
   vista.getRange(riga, 1, 1, VISTA_LARGHEZZE.length).merge()
     .setFontSize(VISTA_CORPO_SPIEGAZIONE)
     .setFontColor(VISTA_GRIGIO)
+    .setFontStyle('italic')
     .setVerticalAlignment('top')
     .setWrap(true);
 }

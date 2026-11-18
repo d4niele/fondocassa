@@ -120,19 +120,32 @@ public class UiTest {
                 assertEquals("€ 5,00", testo(a, R.id.testo_versato));
                 assertEquals("€ 5,00", testo(a, R.id.testo_da_versare));
                 assertEquals(a.getString(R.string.alunni_in_regola_valore, 1, 2), testo(a, R.id.testo_in_regola));
-                assertEquals("€ 0,00", testo(a, R.id.testo_fondo_iniziale));
-                assertEquals(a.getString(R.string.fondo_iniziale_vuoto), testo(a, R.id.testo_fondo_dettaglio));
+                assertEquals("senza fondo la riga resta nascosta", android.view.View.GONE,
+                        a.findViewById(R.id.testo_fondo_incluso).getVisibility());
             });
 
             app.repository().salvaFondoIniziale(3750, "Avanzo a.s. 2025/26", "2026-09-01");
             attendi();
             scenario.onActivity(a -> {
-                assertEquals("€ 37,50", testo(a, R.id.testo_fondo_iniziale));
-                assertEquals("Avanzo a.s. 2025/26 · 01/09/2026", testo(a, R.id.testo_fondo_dettaglio));
+                assertEquals(android.view.View.VISIBLE, a.findViewById(R.id.testo_fondo_incluso).getVisibility());
+                assertEquals("di cui fondo iniziale € 37,50", testo(a, R.id.testo_fondo_incluso));
                 assertEquals("€ 42,50", testo(a, R.id.testo_cassa_reale));
                 assertEquals("€ 47,50", testo(a, R.id.testo_cassa_virtuale));
                 assertEquals("€ 5,00", testo(a, R.id.testo_versato));
             });
+        }
+    }
+
+    @Test
+    public void ilFondoInizialeSiImpostaDalleImpostazioni() throws Exception {
+        app.sblocca();
+        try (ActivityScenario<SettingsActivity> scenario = ActivityScenario.launch(SettingsActivity.class)) {
+            attendi();
+            scenario.onActivity(a -> assertEquals("Fondo iniziale: € 0,00", testo(a, R.id.fondo_iniziale)));
+
+            app.repository().salvaFondoIniziale(3750, "Avanzo a.s. 2025/26", "2026-09-01");
+            attendi();
+            scenario.onActivity(a -> assertEquals("Fondo iniziale: € 37,50", testo(a, R.id.fondo_iniziale)));
         }
     }
 

@@ -74,6 +74,33 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="12dp"
+            android:text="@string/impostazioni_anno"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fondo_iniziale"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/fondo_iniziale" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/fondo_iniziale_nota"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/azzera"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/azzera"
+            android:textColor="?attr/colorError" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp"
             android:text="@string/impostazioni_backup"
             android:textAppearance="?attr/textAppearanceTitleMedium" />
         <com.google.android.material.button.MaterialButton
@@ -97,14 +124,6 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:text="@string/esporta_backup" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/azzera"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/azzera"
-            android:textColor="?attr/colorError" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

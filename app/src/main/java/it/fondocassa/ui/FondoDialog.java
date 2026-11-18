@@ -5,7 +5,7 @@ import android.widget.EditText;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -21,20 +21,20 @@ public final class FondoDialog {
     }
 
     /** @param attuale il fondo già impostato, o null */
-    public static void mostra(Fragment fragment, @Nullable Fondo attuale) {
-        FondocassaApp app = (FondocassaApp) fragment.requireActivity().getApplication();
-        View vista = fragment.getLayoutInflater().inflate(R.layout.dialog_fondo, null);
+    public static void mostra(AppCompatActivity activity, @Nullable Fondo attuale) {
+        FondocassaApp app = (FondocassaApp) activity.getApplication();
+        View vista = activity.getLayoutInflater().inflate(R.layout.dialog_fondo, null);
         EditText descrizione = vista.findViewById(R.id.campo_descrizione);
         EditText importo = vista.findViewById(R.id.campo_importo);
         EditText data = vista.findViewById(R.id.campo_data);
         boolean nuovo = attuale == null || (attuale.importo == 0 && attuale.descrizione.isEmpty());
-        descrizione.setText(nuovo ? fragment.getString(R.string.fondo_descrizione_esempio) : attuale.descrizione);
+        descrizione.setText(nuovo ? activity.getString(R.string.fondo_descrizione_esempio) : attuale.descrizione);
         if (!nuovo) {
             importo.setText(Money.formatInput(attuale.importo));
         }
         BaseActivity.collegaData(data, nuovo || attuale.data.isEmpty() ? Date.oggi() : attuale.data);
 
-        AlertDialog dialog = new MaterialAlertDialogBuilder(fragment.requireContext())
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.fondo_iniziale)
                 .setView(vista)
                 .setPositiveButton(R.string.azione_salva, null)
@@ -48,7 +48,7 @@ public final class FondoDialog {
                 try {
                     centesimi = Money.parse(testoImporto);
                 } catch (IllegalArgumentException e) {
-                    importo.setError(fragment.getString(R.string.errore_importo));
+                    importo.setError(activity.getString(R.string.errore_importo));
                     return;
                 }
             }

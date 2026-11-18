@@ -20,7 +20,7 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 
 | Scheda | A cosa serve |
 |---|---|
-| **Riepilogo** | *In cassa adesso* (fondo iniziale + versato − spese), *Fondo iniziale* (l'avanzo degli anni passati: un tocco per impostarlo), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
+| **Riepilogo** | *In cassa adesso* (fondo iniziale + versato − spese, con sotto «di cui fondo iniziale» se c'è un avanzo), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
 | **Alunni** | L'elenco della classe con versato, residuo e stato (*In regola* / *In sospeso*). **Un tocco su un alunno apre l'incasso rapido**: importo già compilato col residuo, metodo (Contante, Satispay, Bancomat Pay, Hype, Postepay, PayPal, Bonifico), data di oggi → *Registra quota*. |
 | **Quote** | Le quote uguali per tutti, ad esempio «Quota di avvio — 5 €». Il dovuto di ogni alunno è la somma delle quote. |
 | **Entrate** | Registro di tutti i versamenti, per correggerli o eliminarli. |
@@ -48,11 +48,11 @@ restano nell'app e nel foglio privato: non compaiono nelle viste.
 
 ### Fondo iniziale e nuovo anno
 
-Se la classe parte con dei soldi avanzati dagli anni passati, tocca *Fondo iniziale* nel
-*Riepilogo* e inserisci importo, descrizione (es. «Avanzo a.s. 2025/26») e data. Il fondo si somma
+Se la classe parte con dei soldi avanzati dagli anni passati, vai in *Impostazioni → Anno scolastico
+→ Fondo iniziale* e inserisci importo, descrizione (es. «Avanzo a.s. 2025/26») e data. Il fondo si somma
 alla cassa ma non al *Versato*: quote e situazione dei singoli alunni non cambiano.
 
-A fine anno, *Impostazioni → Azzera tutti i dati* elimina quote, entrate e spese e, con l'opzione
+A fine anno, *Impostazioni → Anno scolastico → Azzera tutti i dati* elimina quote, entrate e spese e, con l'opzione
 *Riporta quanto c'è in cassa come fondo iniziale* (attiva di default), il saldo diventa il fondo
 iniziale dell'anno nuovo. Prima conviene esportare un backup.
 

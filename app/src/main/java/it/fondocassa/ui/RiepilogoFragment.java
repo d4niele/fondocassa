@@ -23,7 +23,6 @@ import it.fondocassa.FondocassaApp;
 import it.fondocassa.R;
 import it.fondocassa.data.AlunnoConSaldo;
 import it.fondocassa.data.Fondo;
-import it.fondocassa.util.Date;
 import it.fondocassa.util.Bilancio;
 import it.fondocassa.util.Money;
 
@@ -74,7 +73,6 @@ public class RiepilogoFragment extends Fragment {
             aggiorna();
         });
         app.db().fondi().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(4, v));
-        view.findViewById(R.id.card_fondo_iniziale).setOnClickListener(v -> FondoDialog.mostra(this, fondo));
         app.db().alunni().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(0, v));
         app.db().quote().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(1, v));
         app.db().entrate().observePendenti().observe(getViewLifecycleOwner(), v -> pendenti(2, v));
@@ -102,8 +100,9 @@ public class RiepilogoFragment extends Fragment {
         }
         long fondoIniziale = fondo == null ? 0 : fondo.importo;
         Bilancio b = Bilancio.calcola(alunni, dovutoPerAlunno, entrate, uscite, fondoIniziale);
-        testo(v, R.id.testo_fondo_iniziale, Money.format(fondoIniziale));
-        testo(v, R.id.testo_fondo_dettaglio, dettaglioFondo());
+        TextView fondoIncluso = v.findViewById(R.id.testo_fondo_incluso);
+        fondoIncluso.setVisibility(fondoIniziale != 0 ? View.VISIBLE : View.GONE);
+        fondoIncluso.setText(getString(R.string.fondo_incluso, Money.format(fondoIniziale)));
         testo(v, R.id.testo_cassa_reale, Money.format(b.cassaReale));
         testo(v, R.id.testo_cassa_virtuale, Money.format(b.cassaVirtuale));
         testo(v, R.id.testo_previsto, Money.format(b.previsto));
@@ -125,18 +124,6 @@ public class RiepilogoFragment extends Fragment {
             daSincronizzare += p;
         }
         testo(v, R.id.testo_sync, getString(R.string.stato_sync, daSincronizzare, ultimaSync()));
-    }
-
-    /** "Avanzo a.s. 2025/26 · 01/09/2026", oppure l'invito a impostarlo. */
-    private String dettaglioFondo() {
-        if (fondo == null || (fondo.importo == 0 && fondo.descrizione.isEmpty())) {
-            return getString(R.string.fondo_iniziale_vuoto);
-        }
-        String data = fondo.data.isEmpty() ? "" : Date.mostra(fondo.data);
-        if (fondo.descrizione.isEmpty()) {
-            return data;
-        }
-        return data.isEmpty() ? fondo.descrizione : fondo.descrizione + " · " + data;
     }
 
     private static void testo(View radice, int id, String valore) {

@@ -26,6 +26,7 @@ import java.io.IOException;
 import it.fondocassa.FondocassaApp;
 import it.fondocassa.R;
 import it.fondocassa.data.AppDatabase;
+import it.fondocassa.data.Fondo;
 import it.fondocassa.data.Settings;
 import it.fondocassa.sync.ApiClient;
 import it.fondocassa.sync.ApiModels.BackupResponse;
@@ -34,7 +35,7 @@ import it.fondocassa.sync.SyncWorker;
 import it.fondocassa.util.Date;
 import it.fondocassa.util.Money;
 
-/** Collegamento allo script, ripristino da Google Sheets e sicurezza. */
+/** Collegamento allo script, fondo iniziale e nuovo anno, ripristino da Google Sheets e sicurezza. */
 public class SettingsActivity extends BaseActivity {
     private EditText campoEndpoint;
     private EditText campoToken;
@@ -70,6 +71,12 @@ public class SettingsActivity extends BaseActivity {
         findViewById(R.id.reinvia).setOnClickListener(v -> chiediReinvio());
         findViewById(R.id.esporta_backup).setOnClickListener(v -> esportaBackup());
         findViewById(R.id.azzera).setOnClickListener(v -> chiediAzzeramento());
+        Button bottoneFondo = findViewById(R.id.fondo_iniziale);
+        app().db().fondi().observe(Fondo.ID_INIZIALE).observe(this, fondo -> {
+            bottoneFondo.setText(getString(R.string.fondo_iniziale_valore,
+                    Money.format(fondo == null ? 0 : fondo.importo)));
+            bottoneFondo.setOnClickListener(v -> FondoDialog.mostra(this, fondo));
+        });
         findViewById(R.id.cambia_pin).setOnClickListener(v ->
                 startActivity(new Intent(this, LockActivity.class).putExtra(LockActivity.EXTRA_CAMBIO, true)));
 

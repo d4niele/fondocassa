@@ -18,7 +18,9 @@
     <string name="cassa_reale">In cassa adesso</string>
     <string name="cassa_reale_nota">Fondo iniziale + versato − spese: i soldi che ci sono davvero</string>
     <string name="fondo_iniziale">Fondo iniziale</string>
-    <string name="fondo_iniziale_vuoto">Avanzo degli anni passati: tocca per impostarlo</string>
+    <string name="fondo_incluso">di cui fondo iniziale %1$s</string>
+    <string name="fondo_iniziale_valore">Fondo iniziale: %1$s</string>
+    <string name="fondo_iniziale_nota">L\'avanzo degli anni passati, già compreso in «In cassa adesso».</string>
     <string name="fondo_iniziale_spiegazione">I soldi già in cassa all\'inizio dell\'anno, ad esempio l\'avanzo degli anni passati. Si somma a quanto versato dagli alunni.</string>
     <string name="fondo_importo">Importo (€)</string>
     <string name="fondo_descrizione_esempio">Avanzo anni precedenti</string>
@@ -115,6 +117,7 @@
     <string name="connessione_ok">Connessione riuscita</string>
     <string name="connessione_errore_titolo">Connessione non riuscita</string>
     <string name="errore_https">L\'URL deve iniziare con https://</string>
+    <string name="impostazioni_anno">Anno scolastico</string>
     <string name="impostazioni_backup">Backup e ripristino</string>
     <string name="ripristina">Ripristina dati da Google Sheets</string>
     <string name="ripristina_conferma">Tutti i dati presenti su questo dispositivo verranno sostituiti con quelli del foglio Google.</string>

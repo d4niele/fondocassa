@@ -8,19 +8,21 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
 
         <!-- Quanto abbiamo in realtà -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -32,8 +34,7 @@
                     android:id="@+id/testo_cassa_reale"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textAppearance="?attr/textAppearanceDisplaySmall" />
+                    android:textAppearance="?attr/textAppearanceHeadlineMedium" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -48,7 +49,7 @@
             android:id="@+id/card_fondo_iniziale"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -56,7 +57,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:padding="16dp">
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -91,13 +93,14 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -109,8 +112,7 @@
                     android:id="@+id/testo_cassa_virtuale"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textAppearance="?attr/textAppearanceHeadlineMedium" />
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -124,13 +126,14 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -142,7 +145,7 @@
                     android:id="@+id/testo_quote_dettaglio"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginBottom="8dp"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
                 <LinearLayout
@@ -212,14 +215,14 @@
                     android:id="@+id/avanzamento"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="8dp"
                     android:max="100" />
 
                 <TextView
                     android:id="@+id/testo_in_regola"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="4dp"
                     android:textAppearance="?attr/textAppearanceBodyMedium" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -227,17 +230,20 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp">
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
                     android:text="@string/totale_uscite"
                     android:textAppearance="?attr/textAppearanceLabelLarge" />
 
@@ -245,7 +251,8 @@
                     android:id="@+id/testo_uscite"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="12dp"
                     android:textAppearance="?attr/textAppearanceTitleLarge" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

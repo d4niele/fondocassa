@@ -50,7 +50,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '14';
+var VERSIONE_FORMATO = '15';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -199,6 +199,10 @@ function sync_(corpo) {
     risposta[chiave] = record.length ? upsert_(ss, TABELLE[chiave], record, timestamp) : [];
   });
   aggiornaVista_(ss, timestamp);
+  var vistaSpese = ss.getSheetByName(FOGLIO_VISTA_SPESE);
+  if (vistaSpese) {
+    scriviVistaSpese_(ss, vistaSpese);
+  }
   return risposta;
 }
 
@@ -801,15 +805,6 @@ function spiegazione_(vista, riga) {
 function componiVistaSpese_(ss, vista) {
   svuotaVista_(vista, 4);
   vista.getRange(1, 1, 1, 4).setValues([['Data', 'Descrizione', 'Importo', 'Ricevuta']]);
-  // La ricevuta è un collegamento con la scritta «Ricevuta» al posto dell'indirizzo. QUERY non
-  // produce collegamenti, quindi la colonna D ha una sua formula con lo stesso ordinamento
-  // (a parità di data decide l'id, così le due formule restano allineate riga per riga).
-  var ordine = ' where A is not null order by D desc, A asc';
-  var link = 'QUERY(Sync_Spese!A2:F,"select F' + ordine + '",0)';
-  scriviFormule_(ss, vista, [
-    ['A2', '=IFERROR(QUERY(Sync_Spese!A2:F,"select D, B, E' + ordine + '",0),"")'],
-    ['D2', '=IFERROR(ARRAYFORMULA(IF(' + link + '="","",HYPERLINK(' + link + ',"' + VISTA_ETICHETTA_RICEVUTA + '"))),"")']
-  ]);
   estetica_(function () {
     var righe = vista.getMaxRows() - 1;
     vista.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground(COLORE_INTESTAZIONE);
@@ -821,6 +816,46 @@ function componiVistaSpese_(ss, vista) {
     vista.getRange(2, 4, righe, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     stringiVista_(vista, VISTA_SPESE_LARGHEZZE);
   });
+  scriviVistaSpese_(ss, vista);
+}
+
+/**
+ * Riscrive le uscite in Vista_Spese, dalla più recente. Sono valori e non una formula perché la
+ * ricevuta deve essere un collegamento vero con la scritta «Ricevuta»: un HYPERLINK dentro una
+ * formula sul telefono apre la formula invece del documento. Si aggiorna a ogni sincronizzazione.
+ */
+function scriviVistaSpese_(ss, vista) {
+  var tabella = TABELLE.spese;
+  var col = {
+    id: posizione_(tabella, 'id_spesa'), descrizione: posizione_(tabella, 'descrizione'),
+    data: posizione_(tabella, 'data'), importo: posizione_(tabella, 'importo'),
+    url: posizione_(tabella, 'url_giustificativo')
+  };
+  var sorgente = ss.getSheetByName(tabella.foglio);
+  var righe = sorgente ? leggiRighe_(ss, sorgente, tabella) : [];
+  righe.sort(function (x, y) {
+    var data = String(y[col.data]).localeCompare(String(x[col.data]));
+    return data !== 0 ? data : String(x[col.id]).localeCompare(String(y[col.id]));
+  });
+  var vecchie = vista.getLastRow() - 1;
+  if (vecchie > 0) {
+    vista.getRange(2, 1, vecchie, 4).clearContent();
+  }
+  if (!righe.length) {
+    return;
+  }
+  if (vista.getMaxRows() - 1 < righe.length) {
+    vista.insertRowsAfter(vista.getMaxRows(), righe.length - vista.getMaxRows() + 1);
+  }
+  var fuso = ss.getSpreadsheetTimeZone();
+  vista.getRange(2, 1, righe.length, 3).setValues(righe.map(function (r) {
+    return [inData_(r[col.data], fuso), r[col.descrizione], r[col.importo]];
+  }));
+  vista.getRange(2, 4, righe.length, 1).setRichTextValues(righe.map(function (r) {
+    var url = String(r[col.url] || '');
+    var testo = SpreadsheetApp.newRichTextValue().setText(url ? VISTA_ETICHETTA_RICEVUTA : '');
+    return [(url ? testo.setLinkUrl(url) : testo).build()];
+  }));
 }
 
 function scriviFormule_(ss, vista, formule) {

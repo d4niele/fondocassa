@@ -31,6 +31,20 @@ class FakeRange {
     return this;
   }
 
+  /** Testo con collegamento: il testo va nella cella, l'indirizzo in sheet.collegamenti. */
+  setRichTextValues(valori) {
+    if (valori.length !== this.numRows || valori.some((v) => v.length !== this.numCols)) {
+      throw new Error('setRichTextValues: dimensioni diverse dal range');
+    }
+    valori.forEach((riga, r) => riga.forEach((v, c) => {
+      const k = `${this.row + r},${this.col + c}`;
+      this.sheet.scrivi(this.row + r, this.col + c, v.testo);
+      if (v.link) this.sheet.collegamenti[k] = v.link;
+      else delete this.sheet.collegamenti[k];
+    }));
+    return this;
+  }
+
   setValue(valore) {
     this.sheet.scrivi(this.row, this.col, valore);
     return this;
@@ -53,6 +67,7 @@ class FakeRange {
       for (let c = 0; c < this.numCols; c++) {
         this.sheet.scrivi(this.row + r, this.col + c, '');
         delete this.sheet.formule[`${this.row + r},${this.col + c}`];
+        delete this.sheet.collegamenti[`${this.row + r},${this.col + c}`];
       }
     }
     return this;
@@ -168,6 +183,7 @@ class FakeSheet {
     this.ss = ss;
     this.celle = new Map();
     this.formule = {};
+    this.collegamenti = {};
     this.formati = {};
     this.formatiCella = {};
     this.convalide = {};
@@ -354,6 +370,15 @@ function carica() {
     SpreadsheetApp: {
       WrapStrategy: { CLIP: 'CLIP', WRAP: 'WRAP' },
       BorderStyle: { SOLID: 'SOLID' },
+      newRichTextValue: () => {
+        const valore = { testo: '', link: null };
+        const builder = {
+          setText(t) { valore.testo = t; return builder; },
+          setLinkUrl(u) { valore.link = u; return builder; },
+          build: () => ({ ...valore }),
+        };
+        return builder;
+      },
       flush: () => {},
       newDataValidation: () => ({
         requireCheckbox() {

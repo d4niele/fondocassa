@@ -155,11 +155,7 @@ test('i fogli sono correlati: nome alunno in Sync_Entrate e Vista_Classe fatta d
   const spese = env.ss.getSheetByName('Vista_Spese');
   assert.equal(env.ss.fogli[2], spese, 'le spese sono il terzo foglio');
   assert.deepEqual(spese.getRange(1, 1, 1, 4).getValues()[0], ['Data', 'Descrizione', 'Importo', 'Ricevuta']);
-  assert.match(spese.formule['2,1'], /QUERY\(Sync_Spese!A2:F,"select D, B, E where A is not null order by D desc, A asc",0\)/);
-  // La ricevuta è un collegamento con la scritta «Ricevuta», ordinato come le altre colonne.
-  assert.equal(spese.formule['2,4'], '=IFERROR(ARRAYFORMULA(IF('
-    + 'QUERY(Sync_Spese!A2:F,"select F where A is not null order by D desc, A asc",0)="","",HYPERLINK('
-    + 'QUERY(Sync_Spese!A2:F,"select F where A is not null order by D desc, A asc",0),"Ricevuta"))),"")');
+  assert.deepEqual(spese.formule, {}, 'le spese sono valori scritti dallo script, non formule');
 });
 
 test('i fogli sono leggibili: date e importi formattati, colonne larghe quanto serve', () => {
@@ -278,8 +274,6 @@ test('in un foglio in italiano le formule usano il punto e virgola', () => {
   assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,3'], /"non attivo";IF\(/);
   // Le virgole dentro le stringhe (il linguaggio di QUERY) non vanno toccate.
   const spese = env.ss.getSheetByName('Vista_Spese');
-  assert.match(spese.formule['2,1'], /"select D, B, E where A is not null order by D desc, A asc";0\);""\)$/);
-  assert.match(spese.formule['2,4'], /\)="";"";HYPERLINK\(QUERY\(.*;0\);"Ricevuta"\)\)\);""\)$/);
   const tutte = Object.values(vista.formule).concat(Object.values(entrate.formule), Object.values(spese.formule));
   assert.ok(tutte.every((f) => !/,/.test(f.replace(/"[^"]*"/g, ''))), 'nessuna virgola tra gli argomenti');
   // La cella usata per la prova del separatore viene ripulita.
@@ -659,4 +653,26 @@ test('la tabella degli alunni lascia Vista_Classe e va nella sua scheda', () => 
   assert.equal(vista.cella(28, 1), '');
   assert.deepEqual(env.ss.fogli.slice(0, 3).map((f) => f.getName()), ['Vista_Classe', 'Vista_Alunni', 'Vista_Spese']);
   assert.match(env.ss.getSheetByName('Vista_Alunni').formule['4,1'], /Sync_Alunni!B2:B/);
+});
+
+test('Vista_Spese: dalla più recente, con «Ricevuta» come collegamento solo se c\'è', () => {
+  const env = ambiente();
+  const senzaRicevuta = { ...spesa, id_spesa: 's2', descrizione: 'Cartoncini', data: '2026-11-05', url_giustificativo: '' };
+  const stessoGiorno = { ...spesa, id_spesa: 's0', descrizione: 'Colla', url_giustificativo: 'https://drive.google.com/file/d/9/view' };
+  env.post({ token: TOKEN, action: 'sync', spese: [spesa, senzaRicevuta, stessoGiorno] });
+  const vista = env.ss.getSheetByName('Vista_Spese');
+  assert.deepEqual(vista.dati(4), [
+    [giorno('2026-11-05'), 'Cartoncini', 3.5, ''],
+    [giorno('2026-10-01'), 'Colla', 3.5, 'Ricevuta'],
+    [giorno('2026-10-01'), 'Gessi', 3.5, 'Ricevuta'],
+  ]);
+  assert.deepEqual(vista.collegamenti, {
+    '3,4': 'https://drive.google.com/file/d/9/view',
+    '4,4': 'https://drive.google.com/file/d/0/view',
+  });
+
+  // Alla sincronizzazione successiva la vista si riscrive: una spesa eliminata sparisce.
+  env.post({ token: TOKEN, action: 'sync', spese: [{ ...senzaRicevuta, eliminato: true }] });
+  assert.deepEqual(vista.dati(4).map((r) => r[1]), ['Colla', 'Gessi']);
+  assert.equal(vista.collegamenti['4,4'], undefined, 'nessun collegamento rimasto sulla riga svuotata');
 });

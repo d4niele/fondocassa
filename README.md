@@ -1,8 +1,8 @@
-# Fondocassa
+# Fondo cassa
 
 [![CI](https://github.com/d4niele/fondocassa/actions/workflows/ci.yml/badge.svg)](https://github.com/d4niele/fondocassa/actions/workflows/ci.yml)
 
-App Android nativa (Java) per gestire il fondocassa di una classe: quote degli alunni, spese con
+App Android nativa (Java) per gestire il fondo cassa di una classe: quote degli alunni, spese con
 giustificativi, e un foglio Google sempre aggiornato da condividere con i genitori.
 
 - **Offline-first**: tutto viene salvato subito in SQLite sul telefono; la sincronizzazione parte da sola quando c'è rete o con il pulsante *Sincronizza*.
@@ -69,7 +69,7 @@ passaggio di consegne negli anni successivi è semplice.
 
 Si fa una volta sola, dal browser, in una decina di minuti.
 
-1. **Crea il foglio**: vai su <https://sheets.new> e dagli un nome (es. «Fondocassa 3B»). Resterà **privato**: non condividerlo con nessuno.
+1. **Crea il foglio**: vai su <https://sheets.new> e dagli un nome (es. «Fondo cassa 3B»). Resterà **privato**: non condividerlo con nessuno.
 2. **Incolla lo script**: *Estensioni → Apps Script*, cancella il codice presente e incolla il contenuto di [`apps-script/Code.gs`](apps-script/Code.gs). Salva.
 3. **Esegui `setup`**: scegli la funzione **`setup`** nel menu accanto a *Esegui* e premi *Esegui*.
    - La prima volta Google chiede l'autorizzazione e mostra l'avviso «Google non ha verificato questa app»: è normale, lo script è tuo. *Avanzate → Vai a … (non sicuro) → Consenti*.

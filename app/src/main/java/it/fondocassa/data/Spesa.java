@@ -5,7 +5,7 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
-/** Uscita dal fondocassa (1:1 con il foglio Sync_Spese). */
+/** Uscita dal fondo cassa (1:1 con il foglio Sync_Spese). */
 @Entity(tableName = "spese")
 public class Spesa {
     @PrimaryKey

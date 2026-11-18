@@ -5,7 +5,7 @@ import java.util.List;
 import it.fondocassa.data.AlunnoConSaldo;
 
 /**
- * Situazione del fondocassa.
+ * Situazione del fondo cassa.
  *
  * <ul>
  *   <li><b>fondoIniziale</b>: l'avanzo degli anni passati, con cui la cassa parte;</li>

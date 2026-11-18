@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Fondocassa</string>
+    <string name="app_name">Fondo cassa</string>
 
     <string name="tab_riepilogo">Riepilogo</string>
     <string name="tab_alunni">Alunni</string>
@@ -161,5 +161,5 @@
     <string name="pin_avanti">Avanti</string>
     <string name="pin_sblocca">Sblocca</string>
     <string name="pin_biometria">Usa biometria</string>
-    <string name="biometria_titolo">Sblocca Fondocassa</string>
+    <string name="biometria_titolo">Sblocca Fondo cassa</string>
 </resources>

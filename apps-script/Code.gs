@@ -1,5 +1,5 @@
 /**
- * Fondocassa — API Gateway su Google Apps Script.
+ * Fondo cassa — API Gateway su Google Apps Script.
  *
  * Va pubblicato come Web App ("Esegui come: me", "Accesso: chiunque") da uno script
  * collegato al foglio Google privato. L'app Android lo chiama via HTTPS/JSON.
@@ -50,7 +50,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '11';
+var VERSIONE_FORMATO = '12';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -571,7 +571,7 @@ function aggiornaFormato_(ss) {
  *
  * In Vista_Classe ogni voce ha sotto, in piccolo, una riga che spiega cosa significa:
  *
- *    Fondocassa di classe
+ *    Fondo cassa di classe
  *    Aggiornato al 17/11/2026 19:23
  *
  *    In cassa adesso                 € 82,00   ← la cifra che interessa di più, in evidenza
@@ -694,7 +694,7 @@ function componiVista_(ss, vista) {
   var righe = righeVista_();
   svuotaVista_(vista, 10);
 
-  vista.getRange('A1').setValue('Fondocassa di classe');
+  vista.getRange('A1').setValue('Fondo cassa di classe');
   var cella = function (id) {
     return 'B' + righe.voci[id];
   };

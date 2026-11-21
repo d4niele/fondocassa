@@ -53,7 +53,7 @@
     <string name="vuoto_spese">Nessuna spesa registrata.</string>
     <string name="alunno_sconosciuto">Alunno rimosso</string>
     <string name="non_attivo">Non attivo</string>
-    <string name="in_attesa_sync">In attesa di sincronizzazione</string>
+    <string name="in_attesa_sync">Da sincronizzare</string>
     <string name="con_giustificativo">Con giustificativo</string>
 
     <string name="vuoto_quote">Nessuna quota. Tocca + per definire quanto deve versare ogni alunno (es. quota di avvio).</string>

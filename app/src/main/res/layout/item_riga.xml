@@ -45,6 +45,8 @@
             android:id="@+id/etichetta"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:gravity="end"
+            android:maxWidth="160dp"
             android:textAppearance="?attr/textAppearanceLabelMedium" />
     </LinearLayout>
 </LinearLayout>

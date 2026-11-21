@@ -39,9 +39,16 @@ public class RigaAdapter extends RecyclerView.Adapter<RigaAdapter.Holder> {
 
     private final List<Riga> righe = new ArrayList<>();
     private final Consumer<Riga> alTocco;
+    /** Pressione prolungata su una riga; null se la lista non la gestisce. */
+    private final Consumer<Riga> alToccoLungo;
 
     public RigaAdapter(Consumer<Riga> alTocco) {
+        this(alTocco, null);
+    }
+
+    public RigaAdapter(Consumer<Riga> alTocco, Consumer<Riga> alToccoLungo) {
         this.alTocco = alTocco;
+        this.alToccoLungo = alToccoLungo;
     }
 
     public void imposta(List<Riga> nuove) {
@@ -67,6 +74,12 @@ public class RigaAdapter extends RecyclerView.Adapter<RigaAdapter.Holder> {
         h.etichetta.setVisibility(r.etichetta.isEmpty() ? View.GONE : View.VISIBLE);
         h.etichetta.setTextColor(r.coloreEtichetta != 0 ? r.coloreEtichetta : h.coloreBase);
         h.itemView.setOnClickListener(v -> alTocco.accept(r));
+        if (alToccoLungo != null) {
+            h.itemView.setOnLongClickListener(v -> {
+                alToccoLungo.accept(r);
+                return true;
+            });
+        }
     }
 
     @Override

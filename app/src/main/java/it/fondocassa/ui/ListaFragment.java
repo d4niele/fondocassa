@@ -13,7 +13,10 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.util.List;
+import java.util.function.Consumer;
 
 import it.fondocassa.FondocassaApp;
 import it.fondocassa.R;
@@ -39,6 +42,30 @@ public abstract class ListaFragment extends Fragment {
     protected void alAzioneVuoto() {
     }
 
+    /** Pressione prolungata su una riga; di base non fa nulla. */
+    protected boolean gestisceToccoLungo() {
+        return false;
+    }
+
+    protected void alToccoLungo(RigaAdapter.Riga riga) {
+    }
+
+    /**
+     * Chiede conferma prima di eliminare la riga indicata; l'eliminazione vera e propria
+     * (che alla sincronizzazione toglie la riga anche dal foglio) la fa {@code elimina}.
+     */
+    protected void confermaElimina(RigaAdapter.Riga riga, Consumer<String> elimina) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.conferma_elimina_titolo)
+                .setMessage(getString(R.string.conferma_elimina_riga, riga.titolo, riga.valore))
+                .setPositiveButton(R.string.azione_elimina, (d, w) -> {
+                    String id = riga.id;
+                    app().io().execute(() -> elimina.accept(id));
+                })
+                .setNegativeButton(R.string.azione_annulla, null)
+                .show();
+    }
+
     protected FondocassaApp app() {
         return (FondocassaApp) requireActivity().getApplication();
     }
@@ -52,7 +79,7 @@ public abstract class ListaFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        adapter = new RigaAdapter(this::alTocco);
+        adapter = new RigaAdapter(this::alTocco, gestisceToccoLungo() ? this::alToccoLungo : null);
         RecyclerView lista = view.findViewById(R.id.lista);
         lista.setLayoutManager(new LinearLayoutManager(requireContext()));
         lista.addItemDecoration(new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL));

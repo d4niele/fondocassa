@@ -236,6 +236,55 @@ public class UiTest {
         assertFalse(classe.get(0).alunno.synced);
     }
 
+    @Test
+    public void laPressioneProlungataEliminaEntrateESpeseDopoLaConferma() throws Exception {
+        app.sblocca();
+        Entrata e = new Entrata();
+        e.alunnoId = nuovoAlunno("Anna Rossi");
+        e.importo = 500;
+        e.data = "2026-11-16";
+        app.repository().salvaEntrata(e);
+        it.fondocassa.data.Spesa s = new it.fondocassa.data.Spesa();
+        s.descrizione = "Cartoncini";
+        s.importo = 1200;
+        s.data = "2026-11-17";
+        app.repository().salvaSpesa(s);
+
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            for (int tab : new int[] {R.id.tab_entrate, R.id.tab_spese}) {
+                scenario.onActivity(a ->
+                        ((BottomNavigationView) a.findViewById(R.id.navigazione)).setSelectedItemId(tab));
+                attendi();
+                // «Annulla» non tocca nulla; «Elimina» toglie la riga dalla lista.
+                for (int bottone : new int[] {android.content.DialogInterface.BUTTON_NEGATIVE,
+                        android.content.DialogInterface.BUTTON_POSITIVE}) {
+                    scenario.onActivity(a -> {
+                        RecyclerView lista = a.findViewById(R.id.lista);
+                        lista.measure(0, 0);
+                        lista.layout(0, 0, 1000, 2000);
+                        assertEquals(1, lista.getAdapter().getItemCount());
+                        assertTrue(lista.getChildAt(0).performLongClick());
+                        androidx.appcompat.app.AlertDialog dialogo = (androidx.appcompat.app.AlertDialog)
+                                org.robolectric.shadows.ShadowDialog.getLatestDialog();
+                        assertNotNull("prima di eliminare si chiede conferma", dialogo);
+                        dialogo.getButton(bottone).performClick();
+                    });
+                    attendi();
+                }
+                scenario.onActivity(a -> assertEquals(0,
+                        ((RecyclerView) a.findViewById(R.id.lista)).getAdapter().getItemCount()));
+            }
+        }
+
+        // Le righe restano marcate eliminate e da inviare: la sincronizzazione le toglie dal foglio.
+        Entrata entrata = app.db().entrate().get(e.id);
+        assertTrue(entrata.eliminato);
+        assertFalse(entrata.synced);
+        it.fondocassa.data.Spesa spesa = app.db().spese().get(s.id);
+        assertTrue(spesa.eliminato);
+        assertFalse(spesa.synced);
+    }
+
     private String nuovoAlunno(String nome) {
         Alunno a = new Alunno();
         a.nome = nome;

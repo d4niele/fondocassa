@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import it.fondocassa.R;
+import it.fondocassa.data.Repository;
 import it.fondocassa.data.Spesa;
 import it.fondocassa.util.Date;
 import it.fondocassa.util.Money;
@@ -39,6 +40,17 @@ public class SpeseFragment extends ListaFragment {
     protected void alTocco(RigaAdapter.Riga riga) {
         startActivity(new Intent(requireContext(), SpesaEditActivity.class)
                 .putExtra(SpesaEditActivity.EXTRA_ID, riga.id));
+    }
+
+    @Override
+    protected boolean gestisceToccoLungo() {
+        return true;
+    }
+
+    @Override
+    protected void alToccoLungo(RigaAdapter.Riga riga) {
+        Repository repository = app().repository();
+        confermaElimina(riga, repository::eliminaSpesa);
     }
 
     @Override

@@ -117,11 +117,40 @@ richiesta: tratta il token come una password.
 ### 2. App
 
 1. Scarica l'APK dall'ultima [release](https://github.com/d4niele/fondocassa/releases) e installalo (Android 8.0 o successivo).
-2. Al primo avvio scegli un PIN.
-3. *Impostazioni*: incolla URL della Web App e token, poi *Prova connessione*. Per portarli sul telefono, il modo più comodo è mandarteli in un messaggio a te stesso.
-4. Su un telefono nuovo: *Impostazioni → Ripristina dati da Google Sheets*.
-5. Se hai cancellato o modificato a mano delle righe nel foglio: *Impostazioni → Reinvia tutto al foglio* le riscrive a partire dai dati dell'app.
-6. A inizio anno: *Impostazioni → Azzera tutti i dati* elimina quote, entrate e spese dal telefono e dal foglio (puoi tenere l'elenco degli alunni). Prima conviene esportare un backup.
+2. Al primo avvio scegli un PIN (almeno 4 cifre): servirà ogni volta che apri l'app.
+3. Apri le *Impostazioni* (l'ingranaggio in alto a destra) e collega l'app al foglio, come spiegato qui sotto.
+
+### 3. Impostazioni
+
+<img src="screenshots/impostazioni.png" width="260" align="right" alt="Schermata Impostazioni">
+
+**Collegamento a Google Sheets**: è l'unica parte da compilare.
+
+- **URL della Web App (Apps Script)**: l'URL copiato al punto 5 dell'installazione dello script. Inizia con `https://script.google.com/macros/s/` e **termina con `/exec`**.
+- **Token segreto**: il token copiato al punto 4, dal *Registro esecuzioni*. L'occhio a destra lo mostra per controllare di averlo incollato tutto, senza spazi.
+- **Salva**, poi **Prova connessione**: se compare un errore, guarda la tabella al punto 1.
+
+Per portare URL e token sul telefono, il modo più comodo è mandarteli in un messaggio a te stesso e
+copiarli da lì. Finché i due campi sono vuoti l'app funziona lo stesso, ma solo sul telefono: il
+pulsante *Sincronizza* ricorda di configurarli.
+
+**Anno scolastico**
+
+- **Fondo iniziale**: i soldi già in cassa a inizio anno, ad esempio l'avanzo degli anni passati. Si somma a quanto versano gli alunni ed è compreso in *In cassa adesso*. Lascialo a zero se si parte da una cassa vuota.
+- **Azzera tutti i dati**: da usare a inizio anno. Elimina quote, entrate, spese e fondo iniziale dal telefono e, alla sincronizzazione, anche dal foglio. Puoi tenere l'elenco degli alunni e riportare quanto c'è in cassa come nuovo fondo iniziale. Per confermare va scritto `AZZERA`. Prima conviene esportare un backup.
+
+**Backup e ripristino**
+
+- **Ripristina dati da Google Sheets**: su un telefono nuovo, dopo aver inserito URL e token, ricostruisce tutto dal foglio. Sostituisce i dati del telefono: se ci sono record non ancora sincronizzati l'app lo segnala, perché andrebbero persi.
+- **Reinvia tutto al foglio**: se qualcuno ha cancellato o modificato a mano delle righe nel foglio, le riscrive a partire dai dati dell'app.
+- **Esporta backup su Google Drive**: salva nella cartella `Fondocassa_Backup` uno ZIP con il database e tutti i giustificativi.
+
+**Sicurezza**
+
+- **Cambia PIN**: chiede prima quello attuale.
+- **Sblocca con impronta o volto**: in alternativa al PIN, se il telefono lo supporta.
+
+<br clear="right">
 
 ## Il foglio Google
 

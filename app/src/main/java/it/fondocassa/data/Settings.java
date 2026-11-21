@@ -11,6 +11,11 @@ public class Settings {
     private static final String BIOMETRIA = "biometria";
     private static final String ULTIMA_SYNC = "ultima_sync";
     private static final String CLASSE = "classe";
+    private static final String CLASSE_DA_INVIARE = "classe_da_inviare";
+    private static final String CLASSE_VERSIONE = "classe_versione";
+
+    /** Chiave della classe nel foglio Sync_Impostazioni. */
+    public static final String CHIAVE_CLASSE = "classe";
 
     private final SharedPreferences prefs;
 
@@ -55,8 +60,44 @@ public class Settings {
         return prefs.getString(CLASSE, "");
     }
 
-    public void setClasse(String classe) {
-        prefs.edit().putString(CLASSE, classe).apply();
+    /** Imposta la classe; se è cambiata, la segna da inviare al foglio. @return true se è cambiata */
+    public boolean setClasse(String classe) {
+        if (classe.equals(classe())) {
+            return false;
+        }
+        prefs.edit().putString(CLASSE, classe).putBoolean(CLASSE_DA_INVIARE, true)
+                .putLong(CLASSE_VERSIONE, versioneClasse() + 1).apply();
+        return true;
+    }
+
+    public boolean classeDaInviare() {
+        // Una classe impostata prima che venisse sincronizzata non ha l'indicatore: va inviata.
+        return prefs.getBoolean(CLASSE_DA_INVIARE, !classe().isEmpty());
+    }
+
+    /** Cresce a ogni modifica: una conferma del foglio vale solo per la versione che è stata inviata. */
+    public long versioneClasse() {
+        return prefs.getLong(CLASSE_VERSIONE, 0);
+    }
+
+    /** Il foglio ha ricevuto la classe: non va più inviata, a meno che nel frattempo sia cambiata. */
+    public void confermaClasse(long versioneInviata) {
+        if (versioneInviata == versioneClasse()) {
+            prefs.edit().putBoolean(CLASSE_DA_INVIARE, false).apply();
+        }
+    }
+
+    /** Rimette in attesa la classe, se c'è: la prossima sincronizzazione la riscrive sul foglio. */
+    public void marcaClasseDaInviare() {
+        if (!classe().isEmpty()) {
+            prefs.edit().putBoolean(CLASSE_DA_INVIARE, true).apply();
+        }
+    }
+
+    /** Classe letta dal foglio durante il ripristino: è già allineata, non va reinviata. */
+    public void ripristinaClasse(String classe) {
+        prefs.edit().putString(CLASSE, classe).putBoolean(CLASSE_DA_INVIARE, false)
+                .putLong(CLASSE_VERSIONE, versioneClasse() + 1).apply();
     }
 
     /** Timestamp ISO dell'ultima sincronizzazione riuscita, o stringa vuota. */

@@ -167,6 +167,43 @@ public class UiTest {
     }
 
     @Test
+    public void ilModuloDiModificaHaIlPulsanteEliminaConConferma() throws Exception {
+        app.sblocca();
+        Entrata e = new Entrata();
+        e.alunnoId = nuovoAlunno("Anna Rossi");
+        e.importo = 500;
+        e.data = "2026-11-16";
+        app.repository().salvaEntrata(e);
+
+        // Su un versamento nuovo non c'è niente da eliminare.
+        try (ActivityScenario<EntrataEditActivity> scenario = ActivityScenario.launch(EntrataEditActivity.class)) {
+            scenario.onActivity(a -> assertEquals(android.view.View.GONE,
+                    a.findViewById(R.id.elimina).getVisibility()));
+        }
+        Intent modifica = new Intent(app, EntrataEditActivity.class).putExtra(EntrataEditActivity.EXTRA_ID, e.id);
+        try (ActivityScenario<EntrataEditActivity> scenario = ActivityScenario.launch(modifica)) {
+            attendi();
+            scenario.onActivity(a -> {
+                assertEquals("€ 5,00 da modificare", "5,00",
+                        ((EditText) a.findViewById(R.id.campo_importo)).getText().toString());
+                android.view.View elimina = a.findViewById(R.id.elimina);
+                assertEquals(android.view.View.VISIBLE, elimina.getVisibility());
+                elimina.performClick();
+                androidx.appcompat.app.AlertDialog dialogo = (androidx.appcompat.app.AlertDialog)
+                        org.robolectric.shadows.ShadowDialog.getLatestDialog();
+                assertNotNull("prima di eliminare si chiede conferma", dialogo);
+                dialogo.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+                shadowOf(Looper.getMainLooper()).idle();
+                assertTrue("dopo l'eliminazione il modulo si chiude", a.isFinishing());
+            });
+            attendi();
+        }
+        Entrata eliminata = app.db().entrate().get(e.id);
+        assertTrue(eliminata.eliminato);
+        assertFalse(eliminata.synced);
+    }
+
+    @Test
     public void laClasseImpostataCompareNelTitolo() throws Exception {
         app.sblocca();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {

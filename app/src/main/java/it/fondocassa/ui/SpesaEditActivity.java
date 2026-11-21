@@ -81,6 +81,9 @@ public class SpesaEditActivity extends BaseActivity {
                 confermaElimina();
                 return true;
             });
+            View elimina = findViewById(R.id.elimina);
+            elimina.setVisibility(View.VISIBLE);
+            elimina.setOnClickListener(v -> confermaElimina());
         }
 
         campoDescrizione = findViewById(R.id.campo_descrizione);
@@ -260,7 +263,8 @@ public class SpesaEditActivity extends BaseActivity {
 
     private void confermaElimina() {
         new MaterialAlertDialogBuilder(this)
-                .setMessage(R.string.conferma_elimina)
+                .setTitle(R.string.conferma_elimina_titolo)
+                .setMessage(R.string.conferma_elimina_foglio)
                 .setPositiveButton(R.string.azione_elimina, (d, w) -> {
                     FondocassaApp app = app();
                     app.io().execute(() -> app.repository().eliminaSpesa(id));

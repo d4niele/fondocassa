@@ -23,6 +23,7 @@ import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.ApiModels.EntrataDto;
 import it.fondocassa.sync.ApiModels.ExportResponse;
 import it.fondocassa.sync.ApiModels.FondoDto;
+import it.fondocassa.sync.ApiModels.ImpostazioneDto;
 import it.fondocassa.sync.ApiModels.QuotaDto;
 import it.fondocassa.sync.ApiModels.SpesaDto;
 import it.fondocassa.sync.ApiModels.SyncRequest;
@@ -86,12 +87,17 @@ public class SyncManager {
             // Una spesa il cui allegato non è stato caricato resta in attesa: verrà riproposta
             // con il suo file alla prossima sincronizzazione, senza bloccare tutto il resto.
             spese.removeIf(s -> upload.falliti.contains(s.id));
+            boolean classeDaInviare = settings.classeDaInviare();
+            long versioneClasse = settings.versioneClasse();
             if (alunni.isEmpty() && quote.isEmpty() && entrate.isEmpty() && spese.isEmpty()
-                    && fondi.isEmpty()) {
+                    && fondi.isEmpty() && !classeDaInviare) {
                 return new Esito(0, upload);
             }
 
             SyncRequest richiesta = new SyncRequest();
+            if (classeDaInviare) {
+                richiesta.impostazioni.add(ImpostazioneDto.di(Settings.CHIAVE_CLASSE, settings.classe()));
+            }
             Map<String, Long> versioniAlunni = new HashMap<>();
             Map<String, Long> versioniQuote = new HashMap<>();
             Map<String, Long> versioniEntrate = new HashMap<>();
@@ -158,6 +164,10 @@ public class SyncManager {
                         confermati[0]++;
                     }
                 }
+                if (classeDaInviare && nonNull(risposta.impostazioni).contains(Settings.CHIAVE_CLASSE)) {
+                    settings.confermaClasse(versioneClasse);
+                    confermati[0]++;
+                }
                 db.alunni().rimuoviEliminatiSincronizzati();
                 db.quote().rimuoviEliminatiSincronizzati();
                 db.entrate().rimuoviEliminatiSincronizzati();
@@ -217,6 +227,7 @@ public class SyncManager {
                 db.spese().marcaTuttiDaInviare();
                 db.fondi().marcaTuttiDaInviare();
             });
+            settings.marcaClasseDaInviare();
             return sincronizza();
         }
     }
@@ -262,6 +273,16 @@ public class SyncManager {
                     fondi.add(d.inEntita());
                 }
             }
+            // Come per il fondo: uno script precedente non conosce le impostazioni, la classe resta.
+            String classe = null;
+            if (export.impostazioni != null) {
+                classe = "";
+                for (ImpostazioneDto d : export.impostazioni) {
+                    if (Settings.CHIAVE_CLASSE.equals(d.chiave) && d.valore != null) {
+                        classe = d.valore;
+                    }
+                }
+            }
             db.runInTransaction(() -> {
                 db.alunni().deleteAll();
                 db.quote().deleteAll();
@@ -276,6 +297,9 @@ public class SyncManager {
                     db.fondi().insertAll(fondi);
                 }
             });
+            if (classe != null) {
+                settings.ripristinaClasse(classe);
+            }
             return alunni.size() + quote.size() + entrate.size() + spese.size() + fondi.size();
         }
     }

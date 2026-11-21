@@ -110,7 +110,9 @@
     <string name="errore_importo">Importo non valido</string>
     <string name="conferma_elimina_titolo">Eliminare?</string>
     <string name="conferma_elimina_riga">%1$s · %2$s\n\nAlla prossima sincronizzazione la riga sparirà anche dal foglio Google.</string>
-    <string name="conferma_elimina">Eliminare definitivamente questo elemento?</string>
+    <string name="conferma_elimina_foglio">Alla prossima sincronizzazione la riga sparirà anche dal foglio Google.</string>
+    <string name="elimina_entrata">Elimina versamento</string>
+    <string name="elimina_spesa">Elimina spesa</string>
 
     <string name="titolo_con_classe">Fondo cassa %1$s</string>
     <string name="impostazioni_classe">Classe</string>

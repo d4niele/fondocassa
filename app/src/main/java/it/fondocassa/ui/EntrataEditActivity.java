@@ -1,6 +1,7 @@
 package it.fondocassa.ui;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 
@@ -50,6 +51,9 @@ public class EntrataEditActivity extends BaseActivity {
                 confermaElimina();
                 return true;
             });
+            View elimina = findViewById(R.id.elimina);
+            elimina.setVisibility(View.VISIBLE);
+            elimina.setOnClickListener(v -> confermaElimina());
         }
 
         campoAlunno = findViewById(R.id.campo_alunno);
@@ -147,7 +151,8 @@ public class EntrataEditActivity extends BaseActivity {
 
     private void confermaElimina() {
         new MaterialAlertDialogBuilder(this)
-                .setMessage(R.string.conferma_elimina)
+                .setTitle(R.string.conferma_elimina_titolo)
+                .setMessage(R.string.conferma_elimina_foglio)
                 .setPositiveButton(R.string.azione_elimina, (d, w) -> {
                     FondocassaApp app = app();
                     app.io().execute(() -> app.repository().eliminaEntrata(id));

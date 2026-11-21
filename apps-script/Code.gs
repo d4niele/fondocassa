@@ -11,6 +11,7 @@
  *   Sync_Entrate  id_transazione, alunno_id ─┘ + colonna "alunno" ricavata con CERCA.VERT
  *   Sync_Spese    id_spesa, url_giustificativo ──► file su Google Drive
  *   Sync_Fondi    id_fondo: fondo iniziale (avanzo degli anni passati)
+ *   Sync_Impostazioni chiave, valore: impostazioni condivise (es. la classe «1ª C»)
  *   Vista_Classe  solo formule: il bilancio, leggibile da telefono
  *   Vista_Alunni  solo formule: versato e quanto manca per ogni alunno
  *   Vista_Spese   solo formule: registro delle uscite con il link alla ricevuta
@@ -18,7 +19,7 @@
  * Azioni:
  *   GET  ?action=ping&token=…
  *   GET  ?action=export_all&token=…
- *   POST {token, action: "sync", alunni: [], quote: [], entrate: [], spese: [], fondi: []}
+ *   POST {token, action: "sync", alunni: [], quote: [], entrate: [], spese: [], fondi: [], impostazioni: []}
  *   POST {token, action: "upload_giustificativo", id_spesa, filename, mime_type, data_base64}
  *   POST {token, action: "backup", db_base64}  → ZIP su Drive con database e giustificativi
  *
@@ -50,7 +51,7 @@ var COLORE_INTESTAZIONE = '#e8eef7';
 var LARGHEZZA_COLLEGATA = 200;
 // Cambiando formati o larghezze va aumentata: i fogli esistenti vengono riformattati una volta.
 var PROP_FORMATO = 'FORMATO_FOGLI';
-var VERSIONE_FORMATO = '15';
+var VERSIONE_FORMATO = '16';
 var TABELLE = {
   alunni: {
     foglio: 'Sync_Alunni',
@@ -111,9 +112,17 @@ var TABELLE = {
       { nome: 'data', tipo: 'data', larghezza: 100 },
       { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
     ]
+  },
+  impostazioni: {
+    foglio: 'Sync_Impostazioni',
+    colonne: [
+      { nome: 'chiave', tipo: 'testo', larghezza: 120 },
+      { nome: 'valore', tipo: 'testo', larghezza: 200 },
+      { nome: 'timestamp_sync', tipo: 'istante', larghezza: 150 }
+    ]
   }
 };
-var ORDINE_TABELLE = ['alunni', 'quote', 'entrate', 'spese', 'fondi'];
+var ORDINE_TABELLE = ['alunni', 'quote', 'entrate', 'spese', 'fondi', 'impostazioni'];
 
 // ---------------------------------------------------------------------------
 // Punti di ingresso della Web App
@@ -638,6 +647,8 @@ var VISTA_VOCI = [
       + '*({quota}-' + VERSATO_PER_ALUNNO + '<=0))&" su "&{attivi}',
     spiegazione: 'Alunni che hanno versato tutta la quota' }
 ];
+var VISTA_TITOLO = '=IFERROR("Fondo cassa "&VLOOKUP("classe",Sync_Impostazioni!A2:B,2,FALSE),'
+  + '"Fondo cassa di classe")';
 var VISTA_SPIEGAZIONE_ALUNNI = 'Manca: quanto deve ancora versare l\'alunno. ✓ vuol dire in regola.';
 
 /** Le viste nell'ordine delle schede, subito prima dei fogli di servizio. */
@@ -699,11 +710,11 @@ function componiVista_(ss, vista) {
   var righe = righeVista_();
   svuotaVista_(vista, 10);
 
-  vista.getRange('A1').setValue('Fondo cassa di classe');
   var cella = function (id) {
     return 'B' + righe.voci[id];
   };
-  var formule = [];
+  // Il titolo riporta la classe impostata nell'app, se c'è: «Fondo cassa 1ª C».
+  var formule = [['A1', VISTA_TITOLO]];
   VISTA_VOCI.forEach(function (voce) {
     if (!voce) {
       return;

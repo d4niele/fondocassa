@@ -23,8 +23,8 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 | **Riepilogo** | *In cassa adesso* (fondo iniziale + versato − spese, con sotto «di cui fondo iniziale» se c'è un avanzo), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
 | **Alunni** | L'elenco della classe con versato, residuo e stato (*In regola* / *In sospeso*). **Un tocco su un alunno apre l'incasso rapido**: importo già compilato col residuo, metodo (Contante, Satispay, Bancomat Pay, Hype, Postepay, PayPal, Bonifico), data di oggi → *Registra quota*. |
 | **Quote** | Le quote uguali per tutti, ad esempio «Quota di avvio — 5 €». Il dovuto di ogni alunno è la somma delle quote. |
-| **Entrate** | Registro di tutti i versamenti: un tocco per correggerne uno, **pressione prolungata per eliminarlo** (con conferma). |
-| **Spese** | Uscite con categoria e giustificativo (foto o PDF); anche qui la pressione prolungata elimina, dopo la conferma. |
+| **Entrate** | Registro di tutti i versamenti. **Un tocco apre il modulo di modifica**, che in fondo ha anche *Elimina versamento*; in alternativa, **pressione prolungata** sulla riga per eliminarlo. Si chiede sempre conferma. |
+| **Spese** | Uscite con categoria e giustificativo (foto o PDF). Come per le entrate: un tocco per modificare (con *Elimina spesa* in fondo), pressione prolungata per eliminare. |
 
 Le righe eliminate spariscono subito dall'app e, alla sincronizzazione successiva, anche dal foglio Google.
 
@@ -126,7 +126,8 @@ richiesta: tratta il token come una password.
 
 **Classe**: facoltativa, al massimo 5 caratteri. Compare nel titolo, ad esempio «Fondo cassa 1ª C».
 Basta scrivere `1C`: l'app la trasforma da sola in `1ª C`, perché la «ª» sulla tastiera del telefono
-è scomoda. Resta solo sul telefono, non va sul foglio.
+è scomoda. Viene sincronizzata con il foglio, dove compare nel titolo di `Vista_Classe`, e torna
+indietro con *Ripristina dati da Google Sheets*.
 
 **Collegamento a Google Sheets**: è l'unica parte da compilare per sincronizzare.
 
@@ -166,6 +167,7 @@ Sync_Quote    id_quota              │   descrizione, importo (per alunno), dat
 Sync_Entrate  id_transazione, alunno_id ─┘  data, importo, metodo, note  (+ colonna «alunno» via CERCA.VERT)
 Sync_Spese    id_spesa                  descrizione, categoria, data, importo, url_giustificativo ──► Drive
 Sync_Fondi    id_fondo                  descrizione, importo, data  (fondo iniziale)
+Sync_Impostazioni  chiave             valore  (es. classe = «1ª C»)
 Vista_Classe  solo formule: il bilancio, senza dati dei singoli alunni
 Vista_Alunni  solo formule: versato e quanto manca per ogni alunno
 Vista_Spese   solo formule: registro delle uscite
@@ -174,7 +176,7 @@ Vista_Spese   solo formule: registro delle uscite
 - I fogli `Sync_*` sono le tabelle grezze, 1:1 con SQLite: **non vanno modificati a mano** (ogni riga ha anche `timestamp_sync`).
 - Date (`gg/mm/aaaa`), importi in euro e data dell'ultima sincronizzazione sono formattati per la lettura, e le colonne hanno larghezze adatte al contenuto. I fogli creati da una versione precedente vengono riformattati da soli alla prima sincronizzazione dopo l'aggiornamento di `Code.gs`; da lì in poi le larghezze che cambi a mano restano.
 - Le due viste contengono solo formule, si aggiornano da sole a ogni sincronizzazione e sono pensate per essere lette **dal telefono**: colonne strette che stanno in uno schermo in verticale, nessuna riga bloccata, niente griglia.
-  - `Vista_Classe`: in cima *In cassa adesso* e *Cassa virtuale*, poi fondo iniziale, versato, spese, da versare, quota a testa, previsto e quanti alunni sono in regola, ognuna con sotto una riga in piccolo che spiega cosa significa. Non contiene nomi né importi dei singoli alunni.
+  - `Vista_Classe`: il titolo riporta la classe («Fondo cassa 1ª C»); in cima *In cassa adesso* e *Cassa virtuale*, poi fondo iniziale, versato, spese, da versare, quota a testa, previsto e quanti alunni sono in regola, ognuna con sotto una riga in piccolo che spiega cosa significa. Non contiene nomi né importi dei singoli alunni.
   - `Vista_Alunni`: una riga per alunno con *Versato* e *Manca* (in rosso, o ✓ se è in regola).
   - `Vista_Spese`: data, descrizione, importo e, se c'è, la scritta «Ricevuta» che apre lo scontrino, dalla spesa più recente. La scrive lo script a ogni sincronizzazione: una modifica fatta a mano in `Sync_Spese` compare qui alla sincronizzazione successiva.
 - Ogni foglio ha solo le colonne che usa: quelle vuote a destra vengono eliminate (una colonna con qualcosa scritto a mano resta).
@@ -272,8 +274,8 @@ usano finti servizi Google: verificano la logica e le formule scritte, non il lo
 | Richiesta | Risposta |
 |---|---|
 | `GET ?action=ping&token=…` | `{ok}` |
-| `GET ?action=export_all&token=…` | `{ok, alunni[], quote[], entrate[], spese[], fondi[]}` |
-| `POST {token, action:"sync", alunni[], quote[], entrate[], spese[], fondi[]}` | `{ok, timestamp_sync, alunni[id], quote[id], entrate[id], spese[id], fondi[id]}` |
+| `GET ?action=export_all&token=…` | `{ok, alunni[], quote[], entrate[], spese[], fondi[], impostazioni[]}` |
+| `POST {token, action:"sync", alunni[], quote[], entrate[], spese[], fondi[], impostazioni[]}` | `{ok, timestamp_sync, alunni[id], quote[id], entrate[id], spese[id], fondi[id], impostazioni[chiave]}` |
 | `POST {token, action:"upload_giustificativo", id_spesa, filename, mime_type, data_base64}` | `{ok, url}` |
 | `POST {token, action:"backup", db_base64}` | `{ok, url, nome, giustificativi}` |
 

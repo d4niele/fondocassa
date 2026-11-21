@@ -178,6 +178,23 @@ public final class ApiModels {
         }
     }
 
+    /** Una riga di Sync_Impostazioni, ad esempio {chiave: "classe", valore: "1ª C"}. */
+    public static class ImpostazioneDto {
+        public String chiave;
+        public String valore;
+        public boolean eliminato;
+        @SerializedName("timestamp_sync") public String timestampSync;
+
+        public static ImpostazioneDto di(String chiave, String valore) {
+            ImpostazioneDto d = new ImpostazioneDto();
+            d.chiave = chiave;
+            d.valore = valore;
+            // Un valore vuoto toglie la riga dal foglio.
+            d.eliminato = valore.isEmpty();
+            return d;
+        }
+    }
+
     public static class SyncRequest {
         public String token;
         public final String action = "sync";
@@ -186,6 +203,7 @@ public final class ApiModels {
         public List<EntrataDto> entrate = new ArrayList<>();
         public List<SpesaDto> spese = new ArrayList<>();
         public List<FondoDto> fondi = new ArrayList<>();
+        public List<ImpostazioneDto> impostazioni = new ArrayList<>();
     }
 
     public static class BackupRequest {
@@ -209,6 +227,7 @@ public final class ApiModels {
         public List<String> entrate = new ArrayList<>();
         public List<String> spese = new ArrayList<>();
         public List<String> fondi = new ArrayList<>();
+        public List<String> impostazioni = new ArrayList<>();
     }
 
     public static class UploadRequest {
@@ -227,5 +246,7 @@ public final class ApiModels {
         public List<SpesaDto> spese = new ArrayList<>();
         /** Null se lo script è di una versione precedente, che non conosce il fondo iniziale. */
         public List<FondoDto> fondi;
+        /** Null se lo script è di una versione precedente, che non conosce le impostazioni. */
+        public List<ImpostazioneDto> impostazioni;
     }
 }

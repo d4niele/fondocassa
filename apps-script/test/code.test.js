@@ -393,7 +393,7 @@ test('export_all restituisce esattamente ciò che è stato sincronizzato', () =>
 test('export_all su un foglio vuoto', () => {
   const env = ambiente();
   assert.deepEqual(env.get({ action: 'export_all', token: TOKEN }),
-    { alunni: [], quote: [], entrate: [], spese: [], fondi: [], ok: true });
+    { alunni: [], quote: [], entrate: [], spese: [], fondi: [], impostazioni: [], ok: true });
 });
 
 test('export_all normalizza date e importi modificati a mano nel foglio', () => {
@@ -491,12 +491,13 @@ test('setup crea fogli, cartella e un token che resta stabile', () => {
 
   assert.equal(token.length, 64);
   assert.deepEqual(env.ss.fogli.map((f) => f.nome),
-    ['Vista_Classe', 'Vista_Alunni', 'Vista_Spese', 'Sync_Alunni', 'Sync_Quote', 'Sync_Entrate', 'Sync_Spese', 'Sync_Fondi']);
+    ['Vista_Classe', 'Vista_Alunni', 'Vista_Spese', 'Sync_Alunni', 'Sync_Quote', 'Sync_Entrate', 'Sync_Spese', 'Sync_Fondi',
+      'Sync_Impostazioni']);
   assert.equal(env.drive.cartelle.length, 1);
   assert.equal(env.get({ action: 'ping', token }).ok, true);
 
   assert.equal(env.gs.setup(), token, 'rieseguire setup non cambia il token');
-  assert.equal(env.ss.fogli.length, 8);
+  assert.equal(env.ss.fogli.length, 9);
 
   const nuovo = env.gs.rigeneraToken();
   assert.notEqual(nuovo, token);
@@ -564,6 +565,27 @@ test('il fondo iniziale va in Sync_Fondi, entra nella cassa reale e torna con ex
   assert.deepEqual(e.fondi, [{ ...fondo, timestamp_sync: r.timestamp_sync }]);
 });
 
+test('la classe va in Sync_Impostazioni, compare nel titolo di Vista_Classe e torna con export_all', () => {
+  const env = ambiente();
+  const classe = { chiave: 'classe', valore: '1ª C' };
+  const r = env.post({ token: TOKEN, action: 'sync', impostazioni: [classe] });
+  assert.deepEqual(r.impostazioni, ['classe']);
+
+  const foglio = env.ss.getSheetByName('Sync_Impostazioni');
+  assert.deepEqual(foglio.getRange(1, 1, 1, 3).getValues()[0], ['chiave', 'valore', 'timestamp_sync']);
+  assert.equal(foglio.cella(2, 2), '1ª C');
+  const vista = env.ss.getSheetByName('Vista_Classe');
+  assert.equal(vista.formule['1,1'],
+    '=IFERROR("Fondo cassa "&VLOOKUP("classe",Sync_Impostazioni!A2:B,2,FALSE),"Fondo cassa di classe")');
+
+  const e = env.get({ action: 'export_all', token: TOKEN });
+  assert.deepEqual(e.impostazioni, [{ ...classe, timestamp_sync: r.timestamp_sync }]);
+
+  // Classe cancellata nell'app: la riga sparisce e il titolo torna quello generico.
+  env.post({ token: TOKEN, action: 'sync', impostazioni: [{ chiave: 'classe', valore: '', eliminato: true }] });
+  assert.deepEqual(env.get({ action: 'export_all', token: TOKEN }).impostazioni, []);
+});
+
 test('una Vista_Classe della versione precedente viene ricomposta per il telefono', () => {
   const env = ambiente();
   env.post({ token: TOKEN, action: 'sync', alunni: [anna], spese: [spesa] });
@@ -604,6 +626,7 @@ test('ogni foglio ha solo le colonne che usa', () => {
   const colonne = Object.fromEntries(env.ss.fogli.map((f) => [f.getName(), f.getMaxColumns()]));
   assert.deepEqual(colonne, {
     Vista_Classe: 3, Vista_Alunni: 3, Vista_Spese: 4, Sync_Alunni: 5, Sync_Quote: 5, Sync_Entrate: 8, Sync_Spese: 7, Sync_Fondi: 5,
+    Sync_Impostazioni: 3,
   });
   // Le sincronizzazioni successive continuano a funzionare con le colonne ridotte.
   const r = env.post({ token: TOKEN, action: 'sync', alunni: [marco], entrate: [{ ...entrata, importo_cent: 300 }] });

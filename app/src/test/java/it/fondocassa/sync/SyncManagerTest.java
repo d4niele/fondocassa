@@ -324,6 +324,101 @@ public class SyncManagerTest {
     }
 
     @Test
+    public void laClasseVieneInviataEConfermata() throws Exception {
+        assertTrue(settings.setClasse("1ª C"));
+        assertFalse("la stessa classe non va reinviata", settings.setClasse("1ª C"));
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"timestamp_sync\":\"" + TS + "\","
+                + "\"impostazioni\":[\"classe\"]}"));
+
+        assertEquals(1, sync.sincronizza().inviati);
+
+        JsonObject inviato = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        JsonObject classe = inviato.getAsJsonArray("impostazioni").get(0).getAsJsonObject();
+        assertEquals("classe", classe.get("chiave").getAsString());
+        assertEquals("1ª C", classe.get("valore").getAsString());
+        assertFalse(classe.get("eliminato").getAsBoolean());
+        assertFalse(settings.classeDaInviare());
+        // Niente da inviare: nessuna richiesta.
+        assertEquals(0, sync.sincronizza().inviati);
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    public void unaClasseImpostataPrimaDellaSincronizzazioneVieneInviata() {
+        // Come la salvava la versione precedente: solo il valore, senza indicatore.
+        ApplicationProvider.getApplicationContext().getSharedPreferences("fondocassa", Context.MODE_PRIVATE)
+                .edit().putString("classe", "1ª C").commit();
+        assertTrue(settings.classeDaInviare());
+    }
+
+    @Test
+    public void unaClasseCancellataTogliELaRigaDalFoglio() throws Exception {
+        settings.setClasse("1ª C");
+        settings.confermaClasse(settings.versioneClasse());
+        settings.setClasse("");
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"impostazioni\":[\"classe\"]}"));
+
+        sync.sincronizza();
+
+        JsonObject inviato = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        assertTrue(inviato.getAsJsonArray("impostazioni").get(0).getAsJsonObject().get("eliminato").getAsBoolean());
+    }
+
+    @Test
+    public void laClasseCambiataDuranteLInvioRestaDaInviare() throws Exception {
+        settings.setClasse("1ª C");
+        long inviata = settings.versioneClasse();
+        settings.setClasse("2ª C"); // modificata mentre la richiesta era in viaggio
+        settings.confermaClasse(inviata);
+        assertTrue(settings.classeDaInviare());
+    }
+
+    @Test
+    public void unoScriptPrecedenteNonConfermaLaClasseCheRestaInAttesa() throws Exception {
+        settings.setClasse("1ª C");
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"alunni\":[],\"fondi\":[]}"));
+
+        sync.sincronizza();
+
+        assertTrue(settings.classeDaInviare());
+    }
+
+    @Test
+    public void ilRipristinoRecuperaLaClasseSenzaReinviarla() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"alunni\":[],\"quote\":[],\"entrate\":[],"
+                + "\"spese\":[],\"fondi\":[],\"impostazioni\":[{\"chiave\":\"classe\",\"valore\":\"3ª B\"}]}"));
+
+        sync.ripristina();
+
+        assertEquals("3ª B", settings.classe());
+        assertFalse(settings.classeDaInviare());
+    }
+
+    @Test
+    public void ilRipristinoDaUnoScriptPrecedenteNonCancellaLaClasse() throws Exception {
+        settings.setClasse("1ª C");
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"alunni\":[],\"quote\":[],"
+                + "\"entrate\":[],\"spese\":[]}"));
+
+        sync.ripristina();
+
+        assertEquals("1ª C", settings.classe());
+    }
+
+    @Test
+    public void reinviaTuttoRimandaAncheLaClasse() throws Exception {
+        settings.setClasse("1ª C");
+        settings.confermaClasse(settings.versioneClasse());
+        server.enqueue(new MockResponse().setBody("{\"ok\":true,\"impostazioni\":[\"classe\"]}"));
+
+        sync.reinviaTutto();
+
+        JsonObject inviato = JsonParser.parseString(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+        assertEquals("1ª C", inviato.getAsJsonArray("impostazioni").get(0).getAsJsonObject()
+                .get("valore").getAsString());
+    }
+
+    @Test
     public void ilRipristinoSostituisceTuttiIDatiLocali() throws Exception {
         Alunno vecchio = alunno("Dato locale da scartare");
         server.enqueue(new MockResponse().setBody("{\"ok\":true,"

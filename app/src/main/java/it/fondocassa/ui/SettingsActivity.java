@@ -129,7 +129,10 @@ public class SettingsActivity extends BaseActivity {
         if (!classe.equals(testo(campoClasse))) {
             campoClasse.setText(classe);
         }
-        app().settings().setClasse(classe);
+        Settings settings = app().settings();
+        if (settings.setClasse(classe) && settings.connessioneConfigurata()) {
+            SyncWorker.accoda(this);
+        }
     }
 
     /** Valida e salva i campi. @return false se c'è un errore di validazione */

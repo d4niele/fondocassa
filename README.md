@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/d4niele/fondocassa/actions/workflows/ci.yml/badge.svg)](https://github.com/d4niele/fondocassa/actions/workflows/ci.yml)
 
-App Android nativa (Java) per gestire il fondo cassa di una classe: quote degli alunni, spese con
+App Android per gestire il fondo cassa di una classe: quote degli alunni, spese con
 giustificativi, e un foglio Google sempre aggiornato da condividere con i genitori.
 
 - **Offline-first**: tutto viene salvato subito in SQLite sul telefono; la sincronizzazione parte da sola quando c'è rete o con il pulsante *Sincronizza*.
@@ -40,8 +40,8 @@ Le righe eliminate spariscono subito dall'app e, alla sincronizzazione successiv
     <td align="center"><img src="screenshots/spese.png" width="220" alt="Scheda Spese"><br><sub>Spese</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="screenshots/modifica.png" width="220" alt="Modulo di modifica di un versamento con il pulsante Elimina"><br><sub>Modifica (ed eliminazione)</sub></td>
     <td align="center"><img src="screenshots/elimina.png" width="220" alt="Conferma prima di eliminare un versamento"><br><sub>Eliminazione con conferma</sub></td>
-    <td></td>
     <td></td>
   </tr>
 </table>

@@ -30,6 +30,12 @@ public interface EntrataDao {
     @Query("SELECT COALESCE(SUM(importo), 0) FROM entrate WHERE eliminato = 0")
     long totale();
 
+    /** In ordine cronologico, per il PDF. */
+    @Query("SELECT e.*, a.nome AS nomeAlunno FROM entrate e "
+            + "LEFT JOIN alunni a ON a.alunno_id = e.alunno_id "
+            + "WHERE e.eliminato = 0 ORDER BY e.data, e.aggiornato")
+    List<EntrataConAlunno> listConAlunno();
+
     @Query("SELECT COUNT(*) FROM entrate WHERE alunno_id = :alunnoId AND eliminato = 0")
     int contaPerAlunno(String alunnoId);
 

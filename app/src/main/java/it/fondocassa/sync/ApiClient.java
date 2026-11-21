@@ -83,6 +83,44 @@ public class ApiClient {
         return risposta;
     }
 
+    /** Un giustificativo scaricato da Drive. */
+    public static class Scaricato {
+        public final String nome;
+        public final String mime;
+        public final byte[] contenuto;
+
+        Scaricato(String nome, String mime, byte[] contenuto) {
+            this.nome = nome;
+            this.mime = mime;
+            this.contenuto = contenuto;
+        }
+    }
+
+    /** Scarica da Drive il giustificativo di una spesa (per metterlo nel PDF). */
+    public Scaricato scaricaGiustificativo(String idSpesa) throws IOException {
+        JsonObject richiesta = new JsonObject();
+        richiesta.addProperty("token", token);
+        richiesta.addProperty("action", "scarica_giustificativo");
+        richiesta.addProperty("id_spesa", idSpesa);
+        JsonObject risposta = post(gson.toJson(richiesta));
+        JsonElement dati = risposta.get("data_base64");
+        if (dati == null || !dati.isJsonPrimitive()) {
+            throw new ApiException("Lo script non ha restituito il giustificativo");
+        }
+        byte[] contenuto;
+        try {
+            contenuto = Base64.getDecoder().decode(dati.getAsString());
+        } catch (IllegalArgumentException e) {
+            throw new ApiException("Giustificativo non valido", e);
+        }
+        return new Scaricato(testo(risposta, "nome"), testo(risposta, "mime_type"), contenuto);
+    }
+
+    private static String testo(JsonObject json, String campo) {
+        JsonElement valore = json.get(campo);
+        return valore != null && valore.isJsonPrimitive() ? valore.getAsString() : "";
+    }
+
     public ExportResponse exportAll() throws IOException {
         return gson.fromJson(get("export_all"), ExportResponse.class);
     }

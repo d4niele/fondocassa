@@ -145,6 +145,14 @@
     <string name="backup_ok">Backup salvato su Drive</string>
     <string name="backup_dettaglio">%1$s\n\nContiene il database e %2$d giustificativi. Lo trovi nella cartella Fondocassa_Backup.</string>
     <string name="backup_errore_titolo">Backup non riuscito</string>
+    <string name="esporta_pdf">Scarica il rendiconto in PDF</string>
+    <string name="pdf_in_corso">Preparazione del PDF…</string>
+    <string name="pdf_ok">Rendiconto salvato in Download</string>
+    <string name="pdf_salvato">Rendiconto salvato</string>
+    <string name="pdf_dettaglio">%1$s\n\n%2$d pagine, con %3$d giustificativi.</string>
+    <string name="pdf_mancanti">\n\n%1$d giustificativi non sono stati inclusi: nel PDF è indicato il motivo.</string>
+    <string name="pdf_errore_titolo">PDF non creato</string>
+    <string name="azione_condividi">Condividi</string>
     <string name="azzera">Azzera tutti i dati</string>
     <string name="azzera_messaggio">Quote, entrate, spese e fondo iniziale vengono eliminate dal telefono e, alla sincronizzazione, anche dal foglio Google. Non si può annullare: se ti servono i dati di quest\'anno, prima esporta un backup. Le ricevute già su Drive restano dove sono.</string>
     <string name="azzera_riporta_cassa">Riporta quanto c\'è in cassa (%1$s) come fondo iniziale</string>

@@ -485,6 +485,36 @@ test('upload_giustificativo senza dati viene rifiutato', () => {
   assert.equal(env.lock.rilasciati, 1, 'il lock va rilasciato anche in caso di errore');
 });
 
+test('scarica_giustificativo restituisce il file più recente della spesa', () => {
+  const env = ambiente();
+  const carica = (id, testo, nome) => env.post({
+    token: TOKEN, action: 'upload_giustificativo', id_spesa: id, filename: nome, mime_type: 'image/jpeg',
+    data_base64: Buffer.from(testo).toString('base64'),
+  });
+  carica('s1', 'vecchio scontrino', 'a.jpg');
+  carica('s2', 'altra spesa', 'b.jpg');
+  carica('s1', 'scontrino nuovo', 'c.jpg');
+
+  const r = env.post({ token: TOKEN, action: 'scarica_giustificativo', id_spesa: 's1' });
+  assert.equal(r.ok, true);
+  assert.equal(r.nome, 's1_c.jpg');
+  assert.equal(r.mime_type, 'image/jpeg');
+  assert.equal(Buffer.from(r.data_base64, 'base64').toString(), 'scontrino nuovo');
+
+  // Un file nel cestino non conta.
+  env.drive.file.find((f) => f.nome === 's1_c.jpg').cestinato = true;
+  const vecchio = env.post({ token: TOKEN, action: 'scarica_giustificativo', id_spesa: 's1' });
+  assert.equal(Buffer.from(vecchio.data_base64, 'base64').toString(), 'vecchio scontrino');
+});
+
+test('scarica_giustificativo: spesa senza file, senza id o senza token', () => {
+  const env = ambiente();
+  assert.match(env.post({ token: TOKEN, action: 'scarica_giustificativo', id_spesa: 'nessuna' }).error,
+    /non trovato/);
+  assert.match(env.post({ token: TOKEN, action: 'scarica_giustificativo' }).error, /id_spesa/);
+  assert.match(env.post({ action: 'scarica_giustificativo', id_spesa: 's1' }).error, /Token/);
+});
+
 test('setup crea fogli, cartella e un token che resta stabile', () => {
   const env = carica();
   const token = env.gs.setup();

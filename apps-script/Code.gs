@@ -22,6 +22,7 @@
  *   POST {token, action: "sync", alunni: [], quote: [], entrate: [], spese: [], fondi: [], impostazioni: []}
  *   POST {token, action: "upload_giustificativo", id_spesa, filename, mime_type, data_base64}
  *   POST {token, action: "backup", db_base64}  → ZIP su Drive con database e giustificativi
+ *   POST {token, action: "scarica_giustificativo", id_spesa}  → {nome, mime_type, data_base64}
  *
  * Le risposte sono sempre JSON: {ok: true, …} oppure {ok: false, error: "…"}.
  */
@@ -151,7 +152,12 @@ function doPost(e) {
       throw new Error('Richiesta non valida: JSON atteso');
     }
     verificaToken_(corpo.token);
-    var azioni = { sync: sync_, upload_giustificativo: uploadGiustificativo_, backup: backup_ };
+    var azioni = {
+      sync: sync_,
+      upload_giustificativo: uploadGiustificativo_,
+      backup: backup_,
+      scarica_giustificativo: scaricaGiustificativo_
+    };
     if (!Object.prototype.hasOwnProperty.call(azioni, corpo.action)) {
       throw new Error('Azione non riconosciuta: ' + corpo.action);
     }
@@ -250,6 +256,38 @@ function uploadGiustificativo_(corpo) {
       + String((errore && errore.message) || errore));
   }
   return { url: file.getUrl(), condivisione: condividi_(file) };
+}
+
+/**
+ * Restituisce il giustificativo di una spesa, per metterlo nel PDF esportato dall'app (che dopo
+ * l'upload non tiene più il file). Si cerca solo nella cartella dei giustificativi; se la spesa ha
+ * cambiato allegato, vale il file più recente.
+ */
+function scaricaGiustificativo_(corpo) {
+  if (!corpo.id_spesa) {
+    throw new Error('Richiesta non valida: serve id_spesa');
+  }
+  var prefisso = String(corpo.id_spesa) + '_';
+  var trovato = null;
+  var file = cartellaGiustificativi_().getFiles();
+  while (file.hasNext()) {
+    var f = file.next();
+    if (f.getName().indexOf(prefisso) !== 0 || f.isTrashed()) {
+      continue;
+    }
+    if (!trovato || f.getLastUpdated() > trovato.getLastUpdated()) {
+      trovato = f;
+    }
+  }
+  if (!trovato) {
+    throw new Error('Giustificativo non trovato su Drive');
+  }
+  var blob = trovato.getBlob();
+  return {
+    nome: trovato.getName(),
+    mime_type: blob.getContentType(),
+    data_base64: Utilities.base64Encode(blob.getBytes())
+  };
 }
 
 /**

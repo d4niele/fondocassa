@@ -1,10 +1,15 @@
 package it.fondocassa.ui;
 
 import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
-import android.net.Uri;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -12,6 +17,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -21,13 +29,18 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import it.fondocassa.FondocassaApp;
 import it.fondocassa.R;
 import it.fondocassa.data.AppDatabase;
 import it.fondocassa.data.Fondo;
 import it.fondocassa.data.Settings;
+import it.fondocassa.report.EsportaPdf;
+import it.fondocassa.report.PdfRapporto;
+import it.fondocassa.report.Rapporto;
 import it.fondocassa.sync.ApiClient;
 import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.SyncManager;
@@ -74,6 +87,7 @@ public class SettingsActivity extends BaseActivity {
         findViewById(R.id.ripristina).setOnClickListener(v -> chiediRipristino());
         findViewById(R.id.reinvia).setOnClickListener(v -> chiediReinvio());
         findViewById(R.id.esporta_backup).setOnClickListener(v -> esportaBackup());
+        findViewById(R.id.esporta_pdf).setOnClickListener(v -> esportaPdf());
         findViewById(R.id.azzera).setOnClickListener(v -> chiediAzzeramento());
         Button bottoneFondo = findViewById(R.id.fondo_iniziale);
         app().db().fondi().observe(Fondo.ID_INIZIALE).observe(this, fondo -> {
@@ -355,6 +369,123 @@ public class SettingsActivity extends BaseActivity {
                 })
                 .setNegativeButton(android.R.string.ok, null)
                 .show();
+    }
+
+    /** Prima di Android 10 scrivere in Download richiede un permesso: si fa scegliere il file. */
+    private final ActivityResultLauncher<String> sceltaFilePdf =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/pdf"), uri -> {
+                if (uri != null) {
+                    creaPdf(uri, false);
+                }
+            });
+
+    private void esportaPdf() {
+        if (!salva()) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            creaPdf(null, true);
+        } else {
+            FondocassaApp app = app();
+            app.io().execute(() -> {
+                String nome = EsportaPdf.rapporto(app.db(), app.settings(), versione()).nomeFile();
+                runOnUiThread(() -> sceltaFilePdf.launch(nome));
+            });
+        }
+    }
+
+    /**
+     * Crea il PDF con i dati di adesso.
+     *
+     * @param destinazione il file scelto dall'utente, o null per salvarlo in Download
+     */
+    private void creaPdf(Uri destinazione, boolean inDownload) {
+        FondocassaApp app = app();
+        Settings settings = app.settings();
+        ApiClient api = settings.connessioneConfigurata()
+                ? new ApiClient(settings.endpoint(), settings.token()) : null;
+        File temporanea = new File(getCacheDir(), "pdf");
+        attesa.setVisibility(View.VISIBLE);
+        avviso(getString(R.string.pdf_in_corso));
+        app.io().execute(() -> {
+            Rapporto rapporto = EsportaPdf.rapporto(app.db(), settings, versione());
+            ContentResolver resolver = getContentResolver();
+            Uri uri = destinazione;
+            try {
+                if (inDownload && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    uri = nuovoInDownload(resolver, rapporto.nomeFile());
+                }
+                PdfRapporto.Esito esito;
+                try (OutputStream out = resolver.openOutputStream(uri, "wt")) {
+                    if (out == null) {
+                        throw new IOException("Impossibile scrivere il file");
+                    }
+                    esito = EsportaPdf.crea(rapporto, api, temporanea, out);
+                }
+                if (inDownload && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues pronto = new ContentValues();
+                    pronto.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                    resolver.update(uri, pronto, null, null);
+                }
+                Uri creato = uri;
+                runOnUiThread(() -> mostraPdf(creato, rapporto.nomeFile(), esito, inDownload));
+            } catch (IOException | RuntimeException e) {
+                if (inDownload && uri != null) {
+                    resolver.delete(uri, null, null);
+                }
+                mostraFallimento(R.string.pdf_errore_titolo,
+                        e instanceof IOException ? (IOException) e : new IOException(e.getMessage(), e));
+            }
+        });
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private static Uri nuovoInDownload(ContentResolver resolver, String nome) throws IOException {
+        ContentValues valori = new ContentValues();
+        valori.put(MediaStore.MediaColumns.DISPLAY_NAME, nome);
+        valori.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
+        valori.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+        valori.put(MediaStore.MediaColumns.IS_PENDING, 1);
+        Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, valori);
+        if (uri == null) {
+            throw new IOException("Impossibile creare il file in Download");
+        }
+        return uri;
+    }
+
+    private void mostraPdf(Uri uri, String nome, PdfRapporto.Esito esito, boolean inDownload) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        attesa.setVisibility(View.GONE);
+        String messaggio = getString(R.string.pdf_dettaglio, nome, esito.pagine, esito.allegatiInclusi);
+        if (esito.allegatiMancanti > 0) {
+            messaggio += getString(R.string.pdf_mancanti, esito.allegatiMancanti);
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(inDownload ? R.string.pdf_ok : R.string.pdf_salvato)
+                .setMessage(messaggio)
+                .setPositiveButton(R.string.giustificativo_apri, (d, w) -> apriPdf(uri, Intent.ACTION_VIEW))
+                .setNeutralButton(R.string.azione_condividi, (d, w) -> apriPdf(uri, Intent.ACTION_SEND))
+                .setNegativeButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void apriPdf(Uri uri, String azione) {
+        Intent intent = new Intent(azione);
+        if (Intent.ACTION_SEND.equals(azione)) {
+            intent.setType("application/pdf");
+            intent.putExtra(Intent.EXTRA_STREAM, uri);
+            intent = Intent.createChooser(intent, null);
+        } else {
+            intent.setDataAndType(uri, "application/pdf");
+        }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            avviso(getString(R.string.nessuna_app));
+        }
     }
 
     private void mostraFallimento(int titolo, IOException errore) {

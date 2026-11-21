@@ -29,6 +29,10 @@ public interface QuotaDao {
     @Query("SELECT COALESCE(SUM(importo), 0) FROM quote WHERE eliminato = 0")
     long totale();
 
+    /** In ordine cronologico, per il PDF. */
+    @Query("SELECT * FROM quote WHERE eliminato = 0 ORDER BY data, aggiornato")
+    List<Quota> list();
+
     @Query("SELECT * FROM quote WHERE is_synced = 0")
     List<Quota> pendenti();
 

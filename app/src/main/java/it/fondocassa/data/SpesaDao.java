@@ -28,6 +28,10 @@ public interface SpesaDao {
     @Query("SELECT COALESCE(SUM(importo), 0) FROM spese WHERE eliminato = 0")
     long totale();
 
+    /** In ordine cronologico, per il PDF. */
+    @Query("SELECT * FROM spese WHERE eliminato = 0 ORDER BY data, aggiornato")
+    List<Spesa> list();
+
     @Query("SELECT DISTINCT categoria FROM spese WHERE eliminato = 0 AND categoria <> '' ORDER BY categoria")
     List<String> categorie();
 

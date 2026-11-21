@@ -149,6 +149,7 @@ pulsante *Sincronizza* ricorda di configurarli.
 - **Ripristina dati da Google Sheets**: su un telefono nuovo, dopo aver inserito URL e token, ricostruisce tutto dal foglio. Sostituisce i dati del telefono: se ci sono record non ancora sincronizzati l'app lo segnala, perché andrebbero persi.
 - **Reinvia tutto al foglio**: se qualcuno ha cancellato o modificato a mano delle righe nel foglio, le riscrive a partire dai dati dell'app.
 - **Esporta backup su Google Drive**: salva nella cartella `Fondocassa_Backup` uno ZIP con il database e tutti i giustificativi.
+- **Scarica il rendiconto in PDF**: crea subito in *Download* un PDF datato («Fondo cassa 1ª C - 2026-11-21.pdf»), da aprire o condividere, ad esempio su WhatsApp. Contiene riepilogo, quote, alunni, entrate e spese e, in fondo, i giustificativi numerati come «Allegato 1, 2…»: le foto come immagini, i PDF pagina per pagina. Le pagine hanno la forma dello schermo di un telefono, così si legge senza ingrandire. I giustificativi già caricati vengono scaricati da Drive (serve il collegamento al foglio); se uno non è disponibile, al suo posto c'è il motivo e il link. Ogni pagina riporta in piccolo la data del rendiconto, la versione dell'app e il repository.
 
 **Sicurezza**
 
@@ -278,6 +279,7 @@ usano finti servizi Google: verificano la logica e le formule scritte, non il lo
 | `POST {token, action:"sync", alunni[], quote[], entrate[], spese[], fondi[], impostazioni[]}` | `{ok, timestamp_sync, alunni[id], quote[id], entrate[id], spese[id], fondi[id], impostazioni[chiave]}` |
 | `POST {token, action:"upload_giustificativo", id_spesa, filename, mime_type, data_base64}` | `{ok, url}` |
 | `POST {token, action:"backup", db_base64}` | `{ok, url, nome, giustificativi}` |
+| `POST {token, action:"scarica_giustificativo", id_spesa}` | `{ok, nome, mime_type, data_base64}` |
 
 Gli importi viaggiano in centesimi (`importo_cent`) e sono scritti in euro nel foglio. Un record con
 `eliminato: true` viene rimosso dal foglio. In caso di errore: `{ok:false, error}`.

@@ -344,7 +344,20 @@ function carica() {
           cartella: nome,
           condivisione: null,
           getName: () => blob.nome,
-          getBlob: () => ({ ...blob, setName: (n) => ({ ...blob, nome: n }) }),
+          getBlob: () => ({
+            ...blob,
+            setName: (n) => ({ ...blob, nome: n }),
+            getBytes: () => blob.byte,
+            getContentType: () => blob.mime,
+          }),
+          aggiornato: new Date(Date.UTC(2026, 0, 1) + drive.file.length * 1000),
+          getLastUpdated() {
+            return this.aggiornato;
+          },
+          cestinato: false,
+          isTrashed() {
+            return this.cestinato;
+          },
           setSharing(accesso, permesso) {
             if ((drive.accessiVietati || []).includes(accesso)) {
               throw new Error('Accesso negato: DriveApp.');
@@ -414,6 +427,7 @@ function carica() {
     },
     Utilities: {
       base64Decode: (s) => Array.from(Buffer.from(s, 'base64')),
+      base64Encode: (byte) => Buffer.from(byte).toString('base64'),
       newBlob: (byte, mime, nome) => ({ byte, mime, nome }),
       zip: (voci, nome) => ({ nome, mime: 'application/zip', voci }),
       formatDate: (data, fuso, formato) => {

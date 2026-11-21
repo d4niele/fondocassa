@@ -151,6 +151,13 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:text="@string/esporta_backup" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/esporta_pdf"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/esporta_pdf" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

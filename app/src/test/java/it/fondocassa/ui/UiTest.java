@@ -167,6 +167,28 @@ public class UiTest {
     }
 
     @Test
+    public void laClasseImpostataCompareNelTitolo() throws Exception {
+        app.sblocca();
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a -> assertEquals("Fondo cassa",
+                    ((com.google.android.material.appbar.MaterialToolbar) a.findViewById(R.id.toolbar))
+                            .getTitle().toString()));
+        }
+        try (ActivityScenario<SettingsActivity> scenario = ActivityScenario.launch(SettingsActivity.class)) {
+            scenario.onActivity(a -> ((EditText) a.findViewById(R.id.campo_classe)).setText("1c"));
+            scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED); // uscendo si salva
+            scenario.onActivity(a -> assertEquals("1ª C",
+                    ((EditText) a.findViewById(R.id.campo_classe)).getText().toString()));
+        }
+        assertEquals("1ª C", app.settings().classe());
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a -> assertEquals("Fondo cassa 1ª C",
+                    ((com.google.android.material.appbar.MaterialToolbar) a.findViewById(R.id.toolbar))
+                            .getTitle().toString()));
+        }
+    }
+
+    @Test
     public void incassoRapidoDallaSchedaAlunni() throws Exception {
         app.sblocca();
         Quota quota = new Quota();

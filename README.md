@@ -124,7 +124,11 @@ richiesta: tratta il token come una password.
 
 <img src="screenshots/impostazioni.png" width="260" align="right" alt="Schermata Impostazioni">
 
-**Collegamento a Google Sheets**: è l'unica parte da compilare.
+**Classe**: facoltativa, al massimo 5 caratteri. Compare nel titolo, ad esempio «Fondo cassa 1ª C».
+Basta scrivere `1C`: l'app la trasforma da sola in `1ª C`, perché la «ª» sulla tastiera del telefono
+è scomoda. Resta solo sul telefono, non va sul foglio.
+
+**Collegamento a Google Sheets**: è l'unica parte da compilare per sincronizzare.
 
 - **URL della Web App (Apps Script)**: l'URL copiato al punto 5 dell'installazione dello script. Inizia con `https://script.google.com/macros/s/` e **termina con `/exec`**.
 - **Token segreto**: il token copiato al punto 4, dal *Registro esecuzioni*. L'occhio a destra lo mostra per controllare di averlo incollato tutto, senza spazi.

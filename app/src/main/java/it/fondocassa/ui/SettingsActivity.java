@@ -32,11 +32,13 @@ import it.fondocassa.sync.ApiClient;
 import it.fondocassa.sync.ApiModels.BackupResponse;
 import it.fondocassa.sync.SyncManager;
 import it.fondocassa.sync.SyncWorker;
+import it.fondocassa.util.Classe;
 import it.fondocassa.util.Date;
 import it.fondocassa.util.Money;
 
 /** Collegamento allo script, fondo iniziale e nuovo anno, ripristino da Google Sheets e sicurezza. */
 public class SettingsActivity extends BaseActivity {
+    private EditText campoClasse;
     private EditText campoEndpoint;
     private EditText campoToken;
     private View attesa;
@@ -53,10 +55,12 @@ public class SettingsActivity extends BaseActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         Settings settings = app().settings();
+        campoClasse = findViewById(R.id.campo_classe);
         campoEndpoint = findViewById(R.id.campo_endpoint);
         campoToken = findViewById(R.id.campo_token);
         attesa = findViewById(R.id.attesa);
         if (savedInstanceState == null) {
+            campoClasse.setText(settings.classe());
             campoEndpoint.setText(settings.endpoint());
             campoToken.setText(settings.token());
         }
@@ -91,6 +95,17 @@ public class SettingsActivity extends BaseActivity {
             settings.setBiometria(attiva);
         });
 
+        // La classe si salva da sola quando si lascia il campo o si esce dalle Impostazioni.
+        campoClasse.setOnFocusChangeListener((v, focus) -> {
+            if (!focus) {
+                salvaClasse();
+            }
+        });
+        campoClasse.setOnEditorActionListener((v, azione, evento) -> {
+            salvaClasse();
+            return false;
+        });
+
         ((TextView) findViewById(R.id.versione)).setText(getString(R.string.versione, versione()));
     }
 
@@ -100,6 +115,21 @@ public class SettingsActivity extends BaseActivity {
         } catch (PackageManager.NameNotFoundException e) {
             return "?";
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        salvaClasse();
+    }
+
+    /** Scrive la classe nella forma «1ª C» e la salva. */
+    private void salvaClasse() {
+        String classe = Classe.normalizza(testo(campoClasse));
+        if (!classe.equals(testo(campoClasse))) {
+            campoClasse.setText(classe);
+        }
+        app().settings().setClasse(classe);
     }
 
     /** Valida e salva i campi. @return false se c'è un errore di validazione */

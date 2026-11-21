@@ -10,6 +10,7 @@ public class Settings {
     private static final String PIN = "pin_hash";
     private static final String BIOMETRIA = "biometria";
     private static final String ULTIMA_SYNC = "ultima_sync";
+    private static final String CLASSE = "classe";
 
     private final SharedPreferences prefs;
 
@@ -47,6 +48,15 @@ public class Settings {
 
     public void setBiometria(boolean attiva) {
         prefs.edit().putBoolean(BIOMETRIA, attiva).apply();
+    }
+
+    /** La classe mostrata nel titolo (es. «1ª C»), o stringa vuota. */
+    public String classe() {
+        return prefs.getString(CLASSE, "");
+    }
+
+    public void setClasse(String classe) {
+        prefs.edit().putString(CLASSE, classe).apply();
     }
 
     /** Timestamp ISO dell'ultima sincronizzazione riuscita, o stringa vuota. */

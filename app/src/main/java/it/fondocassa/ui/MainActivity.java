@@ -48,6 +48,14 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String classe = app().settings().classe();
+        ((MaterialToolbar) findViewById(R.id.toolbar)).setTitle(classe.isEmpty()
+                ? getString(R.string.app_name) : getString(R.string.titolo_con_classe, classe));
+    }
+
     private void mostra(int tab) {
         Fragment fragment;
         if (tab == R.id.tab_alunni) {

@@ -112,6 +112,10 @@
     <string name="conferma_elimina_riga">%1$s · %2$s\n\nAlla prossima sincronizzazione la riga sparirà anche dal foglio Google.</string>
     <string name="conferma_elimina">Eliminare definitivamente questo elemento?</string>
 
+    <string name="titolo_con_classe">Fondo cassa %1$s</string>
+    <string name="impostazioni_classe">Classe</string>
+    <string name="impostazioni_classe_hint">Classe (es. 1C)</string>
+    <string name="impostazioni_classe_aiuto">Compare nel titolo dopo «Fondo cassa». Scrivi 1C: diventa 1ª C.</string>
     <string name="impostazioni_connessione">Collegamento a Google Sheets</string>
     <string name="impostazioni_endpoint">URL della Web App (Apps Script)</string>
     <string name="impostazioni_token">Token segreto</string>

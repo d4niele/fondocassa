@@ -23,8 +23,30 @@ giustificativi, e un foglio Google sempre aggiornato da condividere con i genito
 | **Riepilogo** | *In cassa adesso* (fondo iniziale + versato − spese, con sotto «di cui fondo iniziale» se c'è un avanzo), *Cassa virtuale* (quanto ci sarebbe se tutti avessero versato), e per le quote: *Previsto*, *Versato*, *Da versare*. |
 | **Alunni** | L'elenco della classe con versato, residuo e stato (*In regola* / *In sospeso*). **Un tocco su un alunno apre l'incasso rapido**: importo già compilato col residuo, metodo (Contante, Satispay, Bancomat Pay, Hype, Postepay, PayPal, Bonifico), data di oggi → *Registra quota*. |
 | **Quote** | Le quote uguali per tutti, ad esempio «Quota di avvio — 5 €». Il dovuto di ogni alunno è la somma delle quote. |
-| **Entrate** | Registro di tutti i versamenti, per correggerli o eliminarli. |
-| **Spese** | Uscite con categoria e giustificativo (foto o PDF). |
+| **Entrate** | Registro di tutti i versamenti: un tocco per correggerne uno, **pressione prolungata per eliminarlo** (con conferma). |
+| **Spese** | Uscite con categoria e giustificativo (foto o PDF); anche qui la pressione prolungata elimina, dopo la conferma. |
+
+Le righe eliminate spariscono subito dall'app e, alla sincronizzazione successiva, anche dal foglio Google.
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/riepilogo.png" width="220" alt="Scheda Riepilogo"><br><sub>Riepilogo</sub></td>
+    <td align="center"><img src="screenshots/alunni.png" width="220" alt="Scheda Alunni"><br><sub>Alunni</sub></td>
+    <td align="center"><img src="screenshots/incasso.png" width="220" alt="Incasso rapido di una quota"><br><sub>Incasso rapido</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/quote.png" width="220" alt="Scheda Quote"><br><sub>Quote</sub></td>
+    <td align="center"><img src="screenshots/entrate.png" width="220" alt="Scheda Entrate"><br><sub>Entrate</sub></td>
+    <td align="center"><img src="screenshots/spese.png" width="220" alt="Scheda Spese"><br><sub>Spese</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/elimina.png" width="220" alt="Conferma prima di eliminare un versamento"><br><sub>Eliminazione con conferma</sub></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+<sub>Nomi e importi delle schermate sono di fantasia.</sub>
 
 ### Importare l'elenco della classe
 
